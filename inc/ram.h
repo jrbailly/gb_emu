@@ -4,6 +4,8 @@
 #include <array>
 #include <cstdint>
 #include <memory>
+#include <iostream>
+
 static constexpr std::size_t RAM_SIZE = 0x10000;
 
 class MBC1
@@ -27,6 +29,19 @@ class MBC1
         {
             std::copy(mCartridge->GetBank(value).begin(), mCartridge->GetBank(value).end(), mRam.begin() + 0x4000);
         }
+        else if (address == 0xFF46)
+        {
+            value += 1;
+        }
+        else if (address == 0xFF02)
+        {
+            if ((value & 0x80) == 0x80)
+            {
+                std::cout << mRam [0xFF01];
+                mRam [0xFF01] &= 0xEF;
+            }
+        }
+        mRam [address] = value;
     }
     void init();
     const unsigned char *data() const

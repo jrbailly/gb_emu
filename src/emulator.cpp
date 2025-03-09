@@ -16,6 +16,7 @@ Emulator::~Emulator()
 
 void Emulator::init()
 {
+    mRAM.init ();
 }
 
 void Emulator::loop()
@@ -25,6 +26,7 @@ void Emulator::loop()
     auto start_time = std::chrono::high_resolution_clock::now();
     while (true)
     {
+        mCPU->debug (cycles);
         cycles += mCPU->step();
         mLCD->step(cycles);
         if (cycles >= 65564)
@@ -32,6 +34,7 @@ void Emulator::loop()
         if (cycles >= 70224)
         {
             cycles = 0;
+            mLCD->reset ();
             auto end_time = std::chrono::high_resolution_clock::now();
             auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
             std::this_thread::sleep_for(std::chrono::microseconds(16742 - elapsed));

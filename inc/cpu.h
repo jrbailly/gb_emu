@@ -9,7 +9,6 @@ static constexpr size_t OPCODE_SIZE = 0xFF;
 
 struct Registers
 {
-    unsigned char ir;
     unsigned char ie;
     unsigned short pc;
     unsigned short sp;
@@ -24,17 +23,23 @@ class CPU
 
   public:
     CPU(MBC1 &ram);
+    void debug (uint32_t cycles);
     uint8_t step();
 
-  private:
+  public:
+    enum Register
+    {
+      IF = 0xFF0F,
+      IE = 0xFFFF,
+    };
     enum Reg8
     {
-        B = 0,
-        C,
-        D,
+        C = 0,
+        B,
         E,
-        H,
+        D,
         L,
+        H,
         F,
         A
     };
@@ -57,13 +62,13 @@ class CPU
   private:
     void load_register(uint8_t reg, uint8_t value);
     void write_ram(uint16_t address, uint8_t value);
-    void load_register16(uint8_t reg, uint8_t value);
+    void load_register16(uint8_t reg, uint16_t value);
     void write_ram16(uint16_t address, uint16_t value);
     void push(uint8_t reg);
     void pop(uint8_t reg);
     void add_stack(int8_t value);
-    void add(uint8_t value);
-    void sub(uint8_t value);
+    void add(uint8_t value, uint8_t carry);
+    void sub(uint8_t value, uint8_t carry);
     void cp(uint8_t value);
     void inc(uint8_t value);
     void inc_hl();
@@ -78,12 +83,12 @@ class CPU
     void cpl();
     void inc16(uint8_t reg);
     void dec16(uint8_t reg);
-    void add_hl(uint8_t reg);
+    void add_hl(uint16_t value);
     void add_sp(int8_t reg);
-    uint8_t rotl(uint8_t value);
-    uint8_t rotlc(uint8_t value);
-    uint8_t rotr(uint8_t value);
-    uint8_t rotrc(uint8_t value);
+    uint8_t rotl(uint8_t value, bool zflag);
+    uint8_t rotlc(uint8_t value, bool zflag);
+    uint8_t rotr(uint8_t value, bool zflag);
+    uint8_t rotrc(uint8_t value, bool zflag);
     uint8_t shiftl(uint8_t value);
     uint8_t shiftr(uint8_t value);
     uint8_t shiftr2(uint8_t value);
@@ -100,14 +105,17 @@ class CPU
     // miscellaneous instructions
     void HALT();
     void STOP();
-    void DI();
-    void EI();
-    void NOP();
-    uint8_t DecodeExtendOpcode();
+    void di();
+    void ei();
+    void nop();
+    uint8_t active_interrupt (uint16_t addr);
+    uint8_t decode();
+    uint8_t decodeExtendOpcode();
 
   private:
     Registers mRegister;
     MBC1 &mRAM;
+    std::array <Reg8, 8> mMapReg;
 };
 
 #endif

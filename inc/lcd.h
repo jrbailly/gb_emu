@@ -2,6 +2,8 @@
 #define _LCD_H_
 
 #include "ram.h"
+#include "cpu.h"
+#include<SDL3/SDL.h>
 
 class LCD
 {
@@ -18,10 +20,11 @@ class LCD
     LCD(MBC1 &ram);
     void step(uint32_t cycles_count);
     void render();
-
+    void reset ();
   private:
     MBC1 &mRAM;
     uint32_t mNext_line_cycle;
+    SDL_Window* mWindow;
 };
 
 #endif

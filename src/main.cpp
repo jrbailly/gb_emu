@@ -32,7 +32,8 @@ int main(int argc, char **argv)
     Application App;
 
     // if (ParseCommandLine(argc, argv, Configuration))
-    Configuration.mRomFile = "/media/data/rom/Super Mario Land (World).gb";
+    //Configuration.mRomFile = "/media/data/rom/Super Mario Land (World).gb";
+    Configuration.mRomFile = "c:\\workspace\\gb_emu\\Super Mario Land (World).gb";
     {
         App.MainLoop(Configuration);
     }
