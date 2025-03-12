@@ -1,6 +1,6 @@
 #include "ram.h"
 
-MBC1::MBC1(std::string_view romfile) : mCartridge(std::make_unique<Cartridge>(romfile))
+MBC1::MBC1(std::string_view romfile) : mUpperBank(0), mCartridge(std::make_unique<Cartridge>(romfile))
 {
 }
 

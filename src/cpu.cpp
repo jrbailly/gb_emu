@@ -1,12 +1,13 @@
 #include "cpu.h"
+#include "stdio.h"
 #include <array>
 #include <cstdint>
-#include "stdio.h"
 
 constexpr std::array<uint16_t, 2048> intToBcd = [] {
     std::array<uint16_t, 2048> arr;
 
-    for (int i = 0; i < 2048; ++i) {
+    for (int i = 0; i < 2048; ++i)
+    {
         uint8_t n = (i >> 10) & 1;
         uint8_t h = (i >> 9) & 1;
         uint8_t c = (i >> 8) & 1;
@@ -14,17 +15,33 @@ constexpr std::array<uint16_t, 2048> intToBcd = [] {
         uint8_t carry = 0;
 
         // note: assumes a is a uint8_t and wraps from 0xff to 0
-        if (n == 0) {  // after an addition, adjust if (half-)carry occurred or if result is out of bounds
-            if (c == 1 || val > 0x99) { val += 0x60; carry = 1; }
-            if (h == 1 || (val & 0x0f) > 0x09) { val += 0x6; }
-        } else {  // after a subtraction, only adjust if (half-)carry occurred
-            if (c) { val -= 0x60; }
-            if (h) { val -= 0x6; }
+        if (n == 0)
+        { // after an addition, adjust if (half-)carry occurred or if result is out of bounds
+            if (c == 1 || val > 0x99)
+            {
+                val += 0x60;
+                carry = 1;
+            }
+            if (h == 1 || (val & 0x0f) > 0x09)
+            {
+                val += 0x6;
+            }
+        }
+        else
+        { // after a subtraction, only adjust if (half-)carry occurred
+            if (c)
+            {
+                val -= 0x60;
+            }
+            if (h)
+            {
+                val -= 0x6;
+            }
             carry = c;
         }
-        arr [i] = val;
+        arr[i] = val;
         if (carry == 1)
-            arr [i] |= 0x200;
+            arr[i] |= 0x200;
     }
     return arr;
 }();
@@ -35,38 +52,39 @@ CPU::CPU(MBC1 &ram) : mRAM(ram)
     mRegister.pc = 0x100;
     mRegister.sp = 0xfffe;
     mMapReg = {Reg8::B, Reg8::C, Reg8::D, Reg8::E, Reg8::H, Reg8::L, Reg8::F, Reg8::A};
-    mRegister.regs8 [Reg8::A] = 0x11;
-    mRegister.regs8 [Reg8::F] = 0xB0;
-    mRegister.regs8 [Reg8::B] = 0;
-    mRegister.regs8 [Reg8::C] = 0x13;
-    mRegister.regs8 [Reg8::D] = 0;
-    mRegister.regs8 [Reg8::E] = 0xd8;
-    mRegister.regs8 [Reg8::H] = 0x01;
-    mRegister.regs8 [Reg8::L] = 0x4d;
+    mRegister.regs8[Reg8::A] = 0x01;
+    mRegister.regs8[Reg8::F] = 0x00;
+    mRegister.regs8[Reg8::B] = 0x00;
+    mRegister.regs8[Reg8::C] = 0x13;
+    mRegister.regs8[Reg8::D] = 0;
+    mRegister.regs8[Reg8::E] = 0xd8;
+    mRegister.regs8[Reg8::H] = 0x01;
+    mRegister.regs8[Reg8::L] = 0x4d;
 }
 
-void CPU::debug (uint32_t cycles)
+void CPU::debug(uint32_t cycles)
 {
-    FILE *f = fopen ("log", "a+");
-    fprintf (f,"A:%2X F:", mRegister.regs8[Reg8::A]);
+    FILE *f = fopen("log", "a+");
+    fprintf(f, "A:%2X F:", mRegister.regs8[Reg8::A]);
     if (mRegister.regs8[Reg8::F] & 0x80)
-        fprintf (f,"Z");
+        fprintf(f, "Z");
     else
-        fprintf (f,"-");
+        fprintf(f, "-");
     if (mRegister.regs8[Reg8::F] & 0x40)
-        fprintf (f,"N");
+        fprintf(f, "N");
     else
-        fprintf (f,"-");
+        fprintf(f, "-");
     if (mRegister.regs8[Reg8::F] & 0x20)
-        fprintf (f,"H");
+        fprintf(f, "H");
     else
-        fprintf (f,"-");
+        fprintf(f, "-");
     if (mRegister.regs8[Reg8::F] & 0x10)
-        fprintf (f,"C");
+        fprintf(f, "C");
     else
-        fprintf (f,"-");
-    fprintf (f," BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x  (cy: %d)\n", mRegister.regs16[Reg16::BC], mRegister.regs16[Reg16::DE], mRegister.regs16[Reg16::HL], mRegister.sp, mRegister.pc, cycles);
-    fclose (f);
+        fprintf(f, "-");
+    fprintf(f, " BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x  (cy: %d)\n", mRegister.regs16[Reg16::BC],
+            mRegister.regs16[Reg16::DE], mRegister.regs16[Reg16::HL], mRegister.sp, mRegister.pc, cycles);
+    fclose(f);
 }
 
 uint8_t CPU::step()
@@ -75,34 +93,34 @@ uint8_t CPU::step()
 
     if (mRegister.ie == 1)
     {
-        uint8_t activeInterrupt = mRAM [Register::IE] & mRAM [Register::IF];
+        uint8_t activeInterrupt = mRAM[Register::IE] & mRAM[Register::IF];
 
         if (activeInterrupt & 0x1)
-            cycles_count = active_interrupt (0x40);
+            cycles_count = active_interrupt(0x40);
         else if (activeInterrupt & 0x2)
-            cycles_count = active_interrupt (0x48);
+            cycles_count = active_interrupt(0x48);
         else if (activeInterrupt & 0x4)
-            cycles_count = active_interrupt (0x50);
+            cycles_count = active_interrupt(0x50);
         else if (activeInterrupt & 0x10)
-            cycles_count = active_interrupt (0x58);
+            cycles_count = active_interrupt(0x58);
         else if (activeInterrupt & 0x20)
-            cycles_count = active_interrupt (0x60);
+            cycles_count = active_interrupt(0x60);
     }
-    cycles_count += decode ();
+    cycles_count += decode();
     return (cycles_count);
 }
 
 uint8_t CPU::decode()
 {
     uint8_t opcode = mRAM[mRegister.pc++];
-    uint8_t reg = mMapReg [(opcode >> 3) & 0x7];
+    uint8_t reg = mMapReg[(opcode >> 3) & 0x7];
     uint16_t address;
     uint16_t value;
     uint16_t carry = (mRegister.regs8[Reg8::F] >> 4) & 1;
     int8_t relative;
     int8_t cycles_count = 0;
 
-    if (mRegister.pc - 1 == 0x431)
+    if (mRegister.pc - 1 == 0x29a8)
         relative = 1;
     switch (opcode)
     {
@@ -609,7 +627,7 @@ uint8_t CPU::decode()
             cycles_count = 2;
         break;
     case (0xd9):
-        ei ();
+        ei();
         ret();
         cycles_count = 4;
         break;
@@ -1071,7 +1089,7 @@ inline void CPU::add(uint8_t value, uint8_t carry)
 {
     uint16_t a = mRegister.regs8[Reg8::A];
     uint16_t result = a + value + carry;
-    uint8_t half_result = (a & 0x0F) + (value & 0x0F)  + (carry & 0x0F);
+    uint8_t half_result = (a & 0x0F) + (value & 0x0F) + (carry & 0x0F);
 
     mRegister.regs8[Reg8::A] = result & 0xFF;
     mRegister.regs8[Reg8::F] = 0;
@@ -1158,7 +1176,7 @@ inline void CPU::dec_hl()
     mRegister.regs8[Reg8::F] |= Flags::n;
     if (a == 0)
         mRegister.regs8[Reg8::F] |= Flags::z;
-    if ((a & 0xF) ==  0xF)
+    if ((a & 0xF) == 0xF)
         mRegister.regs8[Reg8::F] |= Flags::h;
 }
 
@@ -1201,7 +1219,7 @@ inline void CPU::scf()
 inline void CPU::daa()
 {
     uint16_t a = mRegister.regs8[Reg8::A] | ((mRegister.regs8[Reg8::F] & 0x7F) << 4);
-    uint16_t result = intToBcd [a];
+    uint16_t result = intToBcd[a];
 
     mRegister.regs8[Reg8::A] = result & 0xFF;
     mRegister.regs8[Reg8::F] &= Flags::n;
@@ -1425,10 +1443,10 @@ inline void CPU::nop()
 {
 }
 
-inline uint8_t CPU::active_interrupt (uint16_t addr)
+inline uint8_t CPU::active_interrupt(uint16_t addr)
 {
-    mRAM.write (Register::IF, 0);
-    di ();
-    call (addr);
+    mRAM.write(Register::IF, 0);
+    di();
+    call(addr);
     return (5);
 }
