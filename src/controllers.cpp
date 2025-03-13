@@ -1,18 +1,20 @@
 #include "controllers.h"
 
-Controllers::Controllers(MBC1 &ram) : mRam(ram), mDpads(0xff), mButtons(0xff)
+Controllers::Controllers(MBC1 &ram) : mRam(ram), mDpads(0xf), mButtons(0xf)
 {
 }
 
-void Controllers::step()
+void Controllers::step(uint16_t last_addr)
 {
-    if (mRam.lastWrite() == Register::JOYP)
+    if (last_addr == Register::JOYP)
     {
         uint8_t value = mRam[Register::JOYP] & 0x30;
-        if (value & 0x20)
-            mRam.write(Register::JOYP, value | mDpads);
-        else if (value & 0x10)
-            mRam.write(Register::JOYP, value | mButtons);
+        if (value & 0x20 && mDpads != 0xF)
+            mRam.write(Register::JOYP, 0x20 | mDpads);
+        else if (value & 0x10 && mButtons != 0xF)
+            mRam.write(Register::JOYP, 0x10 | mButtons);
+        else
+            mRam.write(Register::JOYP, 0x3F);
     }
 }
 

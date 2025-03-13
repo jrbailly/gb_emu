@@ -27,7 +27,7 @@ class Controllers
     };
 
     Controllers(MBC1 &ram);
-    void step();
+    void step(uint16_t last_addr);
     void setInput(SDL_GamepadButtonEvent &event);
     void setInput(SDL_KeyboardEvent &event);
 

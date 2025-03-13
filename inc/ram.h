@@ -48,7 +48,8 @@ class MBC1
                 mRam[0xFF01] &= 0xEF;
             }
         }
-        mRam[address] = value;
+        else
+            mRam[address] = value;
         mWriteAddress = address;
     }
     void init();

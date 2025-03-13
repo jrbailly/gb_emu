@@ -5,10 +5,12 @@
 #include "ram.h"
 #include <SDL3/SDL.h>
 
+const int cycles_per_line = 456;
 const int max_tiles = 256;
 const int width_tiles = 8;
 const int height_tiles = 8;
 const int line_width = max_tiles * width_tiles;
+const int oam_address = 0xfe00;
 class LCD
 {
   public:
@@ -22,7 +24,31 @@ class LCD
         LYC = 0xFF45,
         BGP = 0xFF47,
         OBP0 = 0xFF48,
-        OBP1 = 0xFF49
+        OBP1 = 0xFF49,
+        WY = 0xFF4A,
+        WX = 0xFF4B,
+    };
+    enum TilesAddress
+    {
+        BLOCK0 = 0x8000,
+        BLOCK1 = 0x8800,
+        BLOCK2 = 0x9000,
+    };
+    enum BackgroundAddress
+    {
+        AREA0 = 0x9800,
+        AREA1 = 0x9C00,
+    };
+    enum LCDC
+    {
+        BG_ENABLE = 0x1,
+        OBJ_ENABLE = 0x2,
+        OBJ_SIZE = 0x4,
+        BG_TILE_AREA = 0x8,
+        BG_DATA_AREA = 0x10,
+        WIN_ENABLE = 0x20,
+        WIN_TILE_AREA = 0x40,
+        LCD_ENABLE = 0x80
     };
     enum GrayLevel
     {
@@ -33,11 +59,12 @@ class LCD
         TRANSPARENT
     };
     LCD(MBC1 &ram);
-    void step(uint32_t cycles_count);
+    void step(uint32_t cycles_count, uint16_t last_addr);
     void renderer();
     void reset();
 
   private:
+    void updateStat();
     void updateBGP0();
     void updateOBP0();
     void updateBGP1();

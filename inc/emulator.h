@@ -7,6 +7,7 @@
 #include "cpu.h"
 #include "lcd.h"
 #include "ram.h"
+#include "timer.h"
 #include <memory>
 
 class Emulator
@@ -21,6 +22,7 @@ class Emulator
     std::unique_ptr<CPU> mCPU;
     std::unique_ptr<LCD> mLCD;
     std::unique_ptr<Controllers> mControllers;
+    std::unique_ptr<Timer> mTimer;
     MBC1 mRAM;
     const Config mConfig;
 };
