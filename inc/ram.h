@@ -65,11 +65,14 @@ class MBC1
     {
         mWriteAddress = 0;
     }
+    auto LoadSaveRAM() -> void;
+    auto SaveRAM() -> void;
 
   private:
     uint8_t mMode;
     uint16_t mUpperBank;
     uint16_t mWriteAddress;
+    std::string mFilename;
     std::array<unsigned char, RAM_SIZE> mRam;
     std::unique_ptr<Cartridge> mCartridge;
 };

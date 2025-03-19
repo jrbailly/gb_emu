@@ -5,7 +5,7 @@
 LCD::LCD(MBC1 &ram) : mRAM(ram)
 {
     mNext_line_cycle = 456;
-    mWindow = SDL_CreateWindow("", 320, 288, 0);
+    mWindow = SDL_CreateWindow("", 480, 432, 0);
     mRenderer = SDL_CreateRenderer(mWindow, NULL);
     mSurfaceSprites = SDL_CreateSurface(line_width, 2 * height_tiles, SDL_PIXELFORMAT_RGBA8888);
     mSurfaceBackground = SDL_CreateSurface(line_width, height_tiles, SDL_PIXELFORMAT_RGBA8888);
@@ -18,6 +18,8 @@ LCD::LCD(MBC1 &ram) : mRAM(ram)
     mBGP0[1] = mColors[GrayLevel::LIGHT_GRAY];
     mBGP0[2] = mColors[GrayLevel::DARK_GRAY];
     mBGP0[3] = mColors[GrayLevel::BLACK];
+    mTextureSprites = nullptr;
+    mTextureBackground = nullptr;
     mReloadSurface = true;
 }
 
@@ -31,17 +33,19 @@ void LCD::step(uint32_t cycles_count, uint16_t last_addr)
         updateBGP1();
     else if (last_addr >= 0x8000 && last_addr < 0x9800)
         mReloadSurface = true;
-    if (cycles_count > mNext_line_cycle)
+    if (mNext_line_cycle <= 0)
     {
         uint8_t ly = mRAM[Register::LY] + 1;
 
         mRAM.write(Register::LY, ly);
-        mNext_line_cycle += cycles_per_line;
-
+        mNext_line_cycle = cycles_per_line;
         if (ly == 144) // vblank
             mRAM.write(CPU::Register::IF, 0x1);
         updateStat();
+        if ((mRAM[Register::LCDC] & LCD_ENABLE) && (mRAM[Register::LCDC] & BG_ENABLE) && (ly % 8) == 0)
+            drawBackgroundLine();
     }
+    mNext_line_cycle -= cycles_count;
 }
 
 void LCD::renderer()
@@ -50,32 +54,34 @@ void LCD::renderer()
     {
         loadSurfaceBackground();
         loadSurfaceSprites();
+        if (mTextureSprites)
+            SDL_DestroyTexture(mTextureSprites);
+        if (mTextureBackground)
+            SDL_DestroyTexture(mTextureBackground);
         mTextureSprites = SDL_CreateTextureFromSurface(mRenderer, mSurfaceSprites);
         mTextureBackground = SDL_CreateTextureFromSurface(mRenderer, mSurfaceBackground);
     }
     if (mRAM[Register::LCDC] & LCD_ENABLE)
     {
-        SDL_RenderClear(mRenderer);
-        if (mRAM[Register::LCDC] & BG_ENABLE)
-            drawBackground();
         if (mRAM[Register::LCDC] & OBJ_ENABLE)
             drawSprites();
-        SDL_SetRenderScale(mRenderer, 2, 2);
+        SDL_SetRenderScale(mRenderer, 3, 3);
         SDL_RenderPresent(mRenderer);
+        SDL_RenderClear(mRenderer);
     }
 }
 
 void LCD::reset()
 {
     mNext_line_cycle = cycles_per_line;
-    mRAM.write(Register::LY, 0);
+    mRAM.write(Register::LY, -1);
     mReloadSurface = false;
 }
 
 void LCD::updateStat()
 {
     uint8_t stat = mRAM[Register::STAT] & 0xF8;
-    uint8_t ly = mRAM[Register::LYC];
+    uint8_t ly = mRAM[Register::LY];
     uint8_t lyc = mRAM[Register::LYC];
     uint8_t interrupt = mRAM[CPU::Register::IF];
     uint8_t mode = 0;
@@ -105,12 +111,9 @@ void LCD::updateOBP0()
 {
     uint8_t palette = mRAM[Register::OBP0];
 
-    for (int i = 0; i < 8; i += 2)
-    {
+    for (int i = 2; i < 8; i += 2)
         mOBP0[i / 2] = mColors[(palette >> i) & 0x3];
-        if (((palette >> i) & 0x3) == 0)
-            mOBP0[i / 2] = mColors[GrayLevel::TRANSPARENT];
-    }
+    mOBP0[0] = mColors[GrayLevel::TRANSPARENT];
     mReloadSurface = true;
 }
 
@@ -118,12 +121,9 @@ void LCD::updateBGP1()
 {
     uint8_t palette = mRAM[Register::OBP1];
 
-    for (int i = 0; i < 8; i += 2)
-    {
+    for (int i = 2; i < 8; i += 2)
         mOBP1[i / 2] = mColors[(palette >> i) & 0x3];
-        if (((palette >> i) & 0x3) == 0)
-            mOBP1[i / 2] = mColors[GrayLevel::TRANSPARENT];
-    }
+    mOBP1[0] = mColors[GrayLevel::TRANSPARENT];
     mReloadSurface = true;
 }
 
@@ -139,7 +139,7 @@ void LCD::loadSurfaceSprites()
         {
             for (int k = 0; k < 8; k++)
             {
-                value = (((mRAM[address] >> (7 - k)) & 1) << 1) | ((mRAM[address + 1] >> (7 - k)) & 1);
+                value = ((mRAM[address] >> (7 - k)) & 1) | (((mRAM[address + 1] >> (7 - k)) & 1) << 1);
                 datas[(j * line_width) + (i * width_tiles) + k] = mOBP0[value];
                 datas[((j + height_tiles) * line_width) + (i * width_tiles) + k] = mOBP1[value];
             }
@@ -151,20 +151,16 @@ void LCD::loadSurfaceSprites()
 void LCD::loadSurfaceBackground()
 {
     uint32_t *datas = static_cast<uint32_t *>(mSurfaceBackground->pixels);
-    uint16_t address = TilesAddress::BLOCK2;
+    uint16_t address = TilesAddress::BLOCK0;
     uint8_t value;
 
-    if (mRAM[Register::LCDC] & BG_DATA_AREA)
-        address = TilesAddress::BLOCK0;
-    for (int i = 0; i < 256; ++i)
+    for (int i = 0; i < 384; ++i)
     {
-        if (address == TilesAddress::BLOCK2 + 0x800)
-            address = TilesAddress::BLOCK1;
         for (int line = 0; line < height_tiles; ++line)
         {
             for (int k = 0; k < 8; k++)
             {
-                value = (((mRAM[address] >> (7 - k)) & 1) << 1) | ((mRAM[address + 1] >> (7 - k)) & 1);
+                value = ((mRAM[address] >> (7 - k)) & 1) | (((mRAM[address + 1] >> (7 - k)) & 1) << 1);
                 datas[(line * line_width) + (i * width_tiles) + k] = mBGP0[value];
             }
             address += 2;
@@ -215,40 +211,35 @@ void LCD::drawSprites()
     }
 }
 
-void LCD::drawBackground()
+void LCD::drawBackgroundLine()
 {
     int address = BackgroundAddress::AREA0;
-    int y = mRAM[SCY];
+    int line = mRAM[LY];
+    int y = mRAM[SCY] + line;
     int x = mRAM[SCX];
-    int wy = mRAM[WY];
-    int wx = mRAM[WX];
     int y_offset = y % 8;
     int x_offset = x % 8;
-    uint8_t value;
+    uint16_t value;
     SDL_FRect src;
     SDL_FRect dst;
 
-    // std::cout << (mRAM[LCDC] & WIN_ENABLE) << " " << y << " " << x << " " << wx << " " << wy << std::endl;
     SDL_SetTextureScaleMode(mTextureBackground, SDL_SCALEMODE_NEAREST);
     if (mRAM[Register::LCDC] & BG_TILE_AREA)
         address = BackgroundAddress::AREA1;
-    for (int dst_y = 0; dst_y <= 18; ++dst_y)
+    for (int dst_x = 0; dst_x <= 20; ++dst_x)
     {
-        x = mRAM[SCX];
-        for (int dst_x = 0; dst_x <= 20; ++dst_x)
-        {
-            value = mRAM[address + (y * 4 + x / 8)];
-            src.x = (value * width_tiles);
-            src.y = 0;
-            src.w = width_tiles;
-            src.h = height_tiles;
-            dst.x = (dst_x * width_tiles) - x_offset;
-            dst.y = (dst_y * height_tiles) - y_offset;
-            dst.w = width_tiles;
-            dst.h = height_tiles;
-            SDL_RenderTexture(mRenderer, mTextureBackground, &src, &dst);
-            x = (x + 8) % 256;
-        }
-        y = (y + 8) % 256;
+        value = mRAM[address + (y * 4 + x / 8)];
+        if (value < 128 && (mRAM[Register::LCDC] & BG_DATA_AREA) == 0)
+            value += 256;
+        src.x = (value * width_tiles);
+        src.y = 0;
+        src.w = width_tiles;
+        src.h = height_tiles;
+        dst.x = (dst_x * width_tiles) - x_offset;
+        dst.y = line - y_offset;
+        dst.w = width_tiles;
+        dst.h = height_tiles;
+        SDL_RenderTexture(mRenderer, mTextureBackground, &src, &dst);
+        x = (x + 8) % 256;
     }
 }

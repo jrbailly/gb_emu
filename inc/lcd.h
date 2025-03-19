@@ -6,7 +6,7 @@
 #include <SDL3/SDL.h>
 
 const int cycles_per_line = 456;
-const int max_tiles = 256;
+const int max_tiles = 512;
 const int width_tiles = 8;
 const int height_tiles = 8;
 const int line_width = max_tiles * width_tiles;
@@ -71,11 +71,11 @@ class LCD
     void loadSurfaceSprites();
     void loadSurfaceBackground();
     void drawSprites();
-    void drawBackground();
+    void drawBackgroundLine();
 
   private:
     MBC1 &mRAM;
-    uint32_t mNext_line_cycle;
+    int mNext_line_cycle;
     SDL_Window *mWindow;
     SDL_Renderer *mRenderer;
     SDL_Surface *mSurfaceSprites;

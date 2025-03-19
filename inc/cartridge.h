@@ -4,8 +4,9 @@
 #include <array>
 #include <string>
 #include <vector>
-
 static constexpr size_t BLOCK_SIZE = 0x4000;
+static constexpr size_t ROM_RAM_ADDRESS = 0xA000;
+static constexpr size_t ROM_RAM_SIZE = 0x2000;
 
 class Cartridge
 {

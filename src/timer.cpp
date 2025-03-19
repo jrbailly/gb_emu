@@ -11,14 +11,14 @@ Timer::Timer(MBC1 &RAM) : mRAM(RAM), mNextCycleDiv(0), mNextCycleTima(0), mCycle
 
 void Timer::step(int cycles, uint16_t last_addr)
 {
-    if (cycles > mNextCycleDiv)
+    if (mNextCycleDiv <= 0)
     {
         uint8_t div = mRAM[Register::DIV] + 1;
 
         mRAM.write(Register::DIV, div);
-        mNextCycleDiv += cycles_div;
+        mNextCycleDiv = cycles_div;
     }
-    if (cycles > mNextCycleTima && mCycleTima > 0)
+    if (mNextCycleTima <= 0 && mCycleTima > 0)
     {
         uint8_t tima = mRAM[Register::TIMA];
         uint8_t tma = mRAM[Register::TMA];
@@ -31,7 +31,7 @@ void Timer::step(int cycles, uint16_t last_addr)
         else
             tima++;
         mRAM.write(Register::TIMA, tima);
-        mNextCycleTima += mCycleTima;
+        mNextCycleTima = mCycleTima;
     }
     if (last_addr == 0xFF07)
     {
@@ -45,6 +45,8 @@ void Timer::step(int cycles, uint16_t last_addr)
         else
             mCycleTima = 0;
     }
+    mNextCycleDiv -= cycles;
+    mNextCycleTima -= cycles;
 }
 
 void Timer::reset()

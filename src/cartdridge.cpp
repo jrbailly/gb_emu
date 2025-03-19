@@ -1,4 +1,5 @@
 #include "cartridge.h"
+#include "ram.h"
 #include <fstream>
 #include <stdexcept>
 
