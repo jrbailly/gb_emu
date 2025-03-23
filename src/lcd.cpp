@@ -1,6 +1,7 @@
 #include "lcd.h"
 #include "ram.h"
 #include <cstdio>
+#include <functional>
 
 LCD::LCD(MBC1 &ram) : mRAM(ram)
 {
@@ -24,16 +25,23 @@ LCD::LCD(MBC1 &ram) : mRAM(ram)
     mReloadSurface = true;
 }
 
-void LCD::step(uint32_t cycles_count, uint16_t last_addr)
+void LCD::init(MBC1 &ram)
 {
-    if (last_addr == Register::BGP)
-        updateBGP0();
-    else if (last_addr == Register::OBP0)
-        updateOBP0();
-    else if (last_addr == Register::OBP1)
-        updateBGP1();
-    else if (last_addr >= 0x8000 && last_addr < 0x9800)
-        mReloadSurface = true;
+    ram.RegisterCallback(Register::BGP, [this](MBC1 &ram, uint16_t addr, uint8_t val) { this->updateBGP0(); });
+    ram.RegisterCallback(Register::OBP0, [this](MBC1 &ram, uint16_t addr, uint8_t val) { this->updateOBP0(); });
+    ram.RegisterCallback(Register::OBP1, [this](MBC1 &ram, uint16_t addr, uint8_t val) { this->updateBGP1(); });
+    ram.RegisterCallback(Register::DMA, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+        uint16_t start_address = val << 8;
+        uint16_t end_address = start_address + 160;
+        uint16_t dst_address = 0xFE00;
+        std::copy(ram.begin() + start_address, ram.begin() + end_address, ram.begin() + dst_address);
+    });
+    for (int i = 0x8000; i < 0x9800; ++i)
+        ram.RegisterCallback(i, [this](MBC1 &ram, uint16_t addr, uint8_t val) { mReloadSurface = true; });
+}
+
+void LCD::step(uint32_t cycles_count)
+{
     if (mNext_line_cycle <= 0)
     {
         uint8_t ly = mRAM[Register::LY] + 1;

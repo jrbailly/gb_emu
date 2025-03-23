@@ -58,7 +58,7 @@ CPU::CPU(MBC1 &ram) : mRAM(ram)
 
 void CPU::debug(uint32_t cycles)
 {
-#ifdef A
+    // #ifdef A
     FILE *f = /*stdout; */ fopen("log", "a+");
     fprintf(f, "A:%2X F:", mRegister.regs8[Reg8::A]);
     if (mRegister.regs8[Reg8::F] & 0x80)
@@ -80,14 +80,13 @@ void CPU::debug(uint32_t cycles)
     fprintf(f, " BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x  (cy: %d)\n", mRegister.regs16[Reg16::BC],
             mRegister.regs16[Reg16::DE], mRegister.regs16[Reg16::HL], mRegister.sp, mRegister.pc, cycles);
     fclose(f);
-#endif
+    // #endif
 }
 
 uint8_t CPU::step()
 {
     int8_t cycles_count = 0;
 
-    mRAM.resetLastWrite();
     if (mRegister.ie == 1)
     {
         uint8_t activeInterrupt = mRAM[Register::IE] & mRAM[Register::IF];

@@ -28,6 +28,30 @@ void APU::init_sdl()
         throw std::runtime_error(std::string("SDL_ResumeAudioStreamDevice : ") + SDL_GetError());
 }
 
+void APU::init(MBC1 &ram)
+{
+    ram.RegisterCallback(Register::NR14, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+        if (val & 0x80)
+            trigger_ch1();
+    });
+    ram.RegisterCallback(Register::NR24, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+        if (val & 0x80)
+            trigger_ch2();
+    });
+    ram.RegisterCallback(Register::NR34, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+        if (val & 0x80)
+            trigger_ch3();
+    });
+    ram.RegisterCallback(Register::NR44, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+        if (val & 0x80)
+            trigger_ch4();
+    });
+    ram.RegisterCallback(Register::NR30, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+        if ((val & 0x80) == 0)
+            ram.write(NR52, ram[NR52] & ~(1 << 3));
+    });
+}
+
 void APU::fillTables()
 {
     mDutyCycles[0] = 12.5;
@@ -48,18 +72,8 @@ void APU::fillTables()
     }
 }
 
-void APU::step(uint32_t cycles_count, uint16_t last_addr)
+void APU::step(uint32_t cycles_count)
 {
-    if (last_addr == NR14 && mRAM[NR14] & 0x80)
-        trigger_ch1();
-    else if (last_addr == NR24 && mRAM[NR24] & 0x80)
-        trigger_ch2();
-    else if (last_addr == NR34 && mRAM[NR34] & 0x80)
-        trigger_ch3();
-    else if (last_addr == NR44 && mRAM[NR44] & 0x80)
-        trigger_ch4();
-    if (last_addr == NR30 && (mRAM[NR30] & 0x80) == 0)
-        mRAM.write(NR52, mRAM[NR52] & ~(1 << 3));
     if (mTotalCycle >= mNextCycle)
     {
         if (mRAM[NR52] & 0x80) // audio on

@@ -51,7 +51,8 @@ class APU
         WAVE_RAM = 0xFF30,
     };
     APU(MBC1 &ram);
-    void step(uint32_t cycles_count, uint16_t last_addr);
+    void init(MBC1 &ram);
+    void step(uint32_t cycles_count);
     void flush();
     void callback(int additional_amount, int total_amount);
 

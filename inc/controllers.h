@@ -26,15 +26,14 @@ class Controllers
         START = 0x08,
     };
 
-    Controllers(MBC1 &ram);
-    void step(uint16_t last_addr);
+    Controllers();
+    auto init(MBC1 &ram) -> void;
     void setInput(SDL_GamepadButtonEvent &event);
     void setInput(SDL_KeyboardEvent &event);
 
   private:
     uint8_t mDpads;
     uint8_t mButtons;
-    MBC1 &mRam;
 };
 
 #endif

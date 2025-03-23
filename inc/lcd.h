@@ -22,6 +22,7 @@ class LCD
         SCX = 0xFF43,
         LY = 0xFF44,
         LYC = 0xFF45,
+        DMA = 0xFF46,
         BGP = 0xFF47,
         OBP0 = 0xFF48,
         OBP1 = 0xFF49,
@@ -59,7 +60,8 @@ class LCD
         TRANSPARENT
     };
     LCD(MBC1 &ram);
-    void step(uint32_t cycles_count, uint16_t last_addr);
+    void init(MBC1 &ram);
+    void step(uint32_t cycles_count);
     void renderer();
     void reset();
 

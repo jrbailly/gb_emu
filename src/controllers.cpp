@@ -1,21 +1,21 @@
 #include "controllers.h"
 
-Controllers::Controllers(MBC1 &ram) : mRam(ram), mDpads(0xf), mButtons(0xf)
+Controllers::Controllers() : mDpads(0xf), mButtons(0xf)
 {
 }
 
-void Controllers::step(uint16_t last_addr)
+auto Controllers::init(MBC1 &ram) -> void
 {
-    if (last_addr == Register::JOYP)
-    {
-        uint8_t value = mRam[Register::JOYP] & 0x30;
+    ram.RegisterCallback(Register::JOYP, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+        uint8_t value = val & 0x30;
+
         if (value & 0x20 && mDpads != 0xF)
-            mRam.write(Register::JOYP, 0x20 | mDpads);
+            ram.write(Register::JOYP, 0x20 | mDpads, false);
         else if (value & 0x10 && mButtons != 0xF)
-            mRam.write(Register::JOYP, 0x10 | mButtons);
+            ram.write(Register::JOYP, 0x10 | mButtons, false);
         else
-            mRam.write(Register::JOYP, 0x3F);
-    }
+            ram.write(Register::JOYP, 0x3F, false);
+    });
 }
 
 void Controllers::setInput(SDL_GamepadButtonEvent &event)

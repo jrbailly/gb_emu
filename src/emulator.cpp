@@ -6,8 +6,8 @@
 
 Emulator::Emulator(const Config &configuration)
     : mRAM(configuration.mRomFile), mCPU(std::make_unique<CPU>(mRAM)), mLCD(std::make_unique<LCD>(mRAM)),
-      mControllers(std::make_unique<Controllers>(mRAM)), mTimer(std::make_unique<Timer>(mRAM)),
-      mAPU(std::make_unique<APU>(mRAM)), mConfig(configuration)
+      mControllers(std::make_unique<Controllers>()), mTimer(std::make_unique<Timer>()),
+      mAPU(std::make_unique<APU>(mRAM)), mCartridge(std::make_unique<Cartridge>()), mConfig(configuration)
 {
 }
 
@@ -17,7 +17,13 @@ Emulator::~Emulator()
 
 void Emulator::init()
 {
-    mRAM.init();
+    mCartridge->ReadROM(mConfig.mRomFile);
+    mCartridge->LoadROM(mRAM);
+    mCartridge->init(mRAM);
+    mAPU->init(mRAM);
+    mControllers->init(mRAM);
+    mLCD->init(mRAM);
+    mTimer->init(mRAM);
     mRAM.LoadSaveRAM();
 }
 
@@ -72,11 +78,9 @@ void Emulator::loop()
         {
             // mCPU->debug(cycles);
             cycles = mCPU->step();
-            last_addr = mRAM.lastWrite();
-            mLCD->step(cycles, last_addr);
-            mAPU->step(cycles, last_addr);
-            mTimer->step(cycles, last_addr);
-            mControllers->step(last_addr);
+            mLCD->step(cycles);
+            mAPU->step(cycles);
+            mTimer->step(mRAM, cycles);
             cycles_count += cycles;
         }
         mLCD->renderer();
@@ -85,7 +89,7 @@ void Emulator::loop()
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
         SDL_DelayPrecise(1000.0 * (16742 - elapsed));
         /*FILE *f = fopen("ram", "wb");
-        fwrite(mRAM.data(), 65535, 1, f);
+        fwrite(&(*mRAM.begin()), 65535, 1, f);
         fclose(f);*/
     }
 }

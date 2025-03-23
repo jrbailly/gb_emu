@@ -14,12 +14,12 @@ class Timer
         TMA = 0xFF06,
         TAC = 0xFF07
     };
-    Timer(MBC1 &RAM);
-    void step(int cycles_count, uint16_t last_addr);
+    Timer();
+    void init(MBC1 &ram);
+    void step(MBC1 &ram, uint32_t cycles_count);
     void reset();
 
   private:
-    MBC1 &mRAM;
     int mNextCycleDiv;
     int mNextCycleTima;
     int mCycleTima;
