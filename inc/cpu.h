@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 static constexpr size_t OPCODE_SIZE = 0xFF;
+static constexpr int CPU_FREQ = 4194304;
 
 struct Registers
 {
@@ -23,14 +24,14 @@ class CPU
 
   public:
     CPU(MBC1 &ram);
-    void debug (uint32_t cycles);
+    void debug(uint32_t cycles);
     uint8_t step();
 
   public:
     enum Register
     {
-      IF = 0xFF0F,
-      IE = 0xFFFF,
+        IF = 0xFF0F,
+        IE = 0xFFFF,
     };
     enum Reg8
     {
@@ -108,14 +109,14 @@ class CPU
     void di();
     void ei();
     void nop();
-    uint8_t active_interrupt (uint16_t addr);
+    uint8_t active_interrupt(uint16_t addr);
     uint8_t decode();
     uint8_t decodeExtendOpcode();
 
   private:
     Registers mRegister;
     MBC1 &mRAM;
-    std::array <Reg8, 8> mMapReg;
+    std::array<Reg8, 8> mMapReg;
 };
 
 #endif

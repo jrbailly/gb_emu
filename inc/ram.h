@@ -20,6 +20,8 @@ class MBC1
     {
         if (address >= 0x2000 && address <= 0x3FFF) // ROM bank change
         {
+            if (value == 0)
+                value = 1;
             std::copy(mCartridge->GetBank(mUpperBank + value).begin(), mCartridge->GetBank(mUpperBank + value).end(),
                       mRam.begin() + 0x4000);
         }
@@ -27,7 +29,6 @@ class MBC1
         {
             if (mMode == 0)
                 mUpperBank = value << 5;
-            // else
         }
         else if (address >= 0x6000 && address <= 0x7FFF) // ROM / RAM change
         {

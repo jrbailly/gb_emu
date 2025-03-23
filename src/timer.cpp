@@ -16,7 +16,7 @@ void Timer::step(int cycles, uint16_t last_addr)
         uint8_t div = mRAM[Register::DIV] + 1;
 
         mRAM.write(Register::DIV, div);
-        mNextCycleDiv = cycles_div;
+        mNextCycleDiv = cycles_div + cycles;
     }
     if (mNextCycleTima <= 0 && mCycleTima > 0)
     {

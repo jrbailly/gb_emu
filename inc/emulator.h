@@ -1,6 +1,7 @@
 #ifndef _EMULATOR_H_
 #define _EMULATOR_H_
 
+#include "apu.h"
 #include "cartridge.h"
 #include "config.h"
 #include "controllers.h"
@@ -23,6 +24,7 @@ class Emulator
     std::unique_ptr<LCD> mLCD;
     std::unique_ptr<Controllers> mControllers;
     std::unique_ptr<Timer> mTimer;
+    std::unique_ptr<APU> mAPU;
     MBC1 mRAM;
     const Config mConfig;
 };

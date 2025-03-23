@@ -6,7 +6,8 @@
 
 Emulator::Emulator(const Config &configuration)
     : mRAM(configuration.mRomFile), mCPU(std::make_unique<CPU>(mRAM)), mLCD(std::make_unique<LCD>(mRAM)),
-      mControllers(std::make_unique<Controllers>(mRAM)), mTimer(std::make_unique<Timer>(mRAM)), mConfig(configuration)
+      mControllers(std::make_unique<Controllers>(mRAM)), mTimer(std::make_unique<Timer>(mRAM)),
+      mAPU(std::make_unique<APU>(mRAM)), mConfig(configuration)
 {
 }
 
@@ -34,6 +35,7 @@ void Emulator::loop()
             std::this_thread::sleep_for(std::chrono::minutes(1));
         }
     });
+    worker.detach();
     while (true)
     {
         auto start_time = std::chrono::high_resolution_clock::now();
@@ -72,16 +74,16 @@ void Emulator::loop()
             cycles = mCPU->step();
             last_addr = mRAM.lastWrite();
             mLCD->step(cycles, last_addr);
+            mAPU->step(cycles, last_addr);
             mTimer->step(cycles, last_addr);
             mControllers->step(last_addr);
             cycles_count += cycles;
         }
         mLCD->renderer();
+        mAPU->flush();
         auto end_time = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
-        std::this_thread::sleep_for(std::chrono::microseconds(16742 - elapsed));
-        if (16742 - elapsed < 0)
-            std::cout << "holly shit !" << std::endl;
+        SDL_DelayPrecise(1000.0 * (16742 - elapsed));
         /*FILE *f = fopen("ram", "wb");
         fwrite(mRAM.data(), 65535, 1, f);
         fclose(f);*/

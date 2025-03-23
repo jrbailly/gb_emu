@@ -23,20 +23,14 @@ constexpr std::array<uint16_t, 2048> intToBcd = [] {
                 carry = 1;
             }
             if (h == 1 || (val & 0x0f) > 0x09)
-            {
                 val += 0x6;
-            }
         }
         else
         { // after a subtraction, only adjust if (half-)carry occurred
             if (c)
-            {
                 val -= 0x60;
-            }
             if (h)
-            {
                 val -= 0x6;
-            }
             carry = c;
         }
         arr[i] = val;
@@ -64,7 +58,8 @@ CPU::CPU(MBC1 &ram) : mRAM(ram)
 
 void CPU::debug(uint32_t cycles)
 {
-    FILE *f = stdout; // fopen("log", "a+");
+#ifdef A
+    FILE *f = /*stdout; */ fopen("log", "a+");
     fprintf(f, "A:%2X F:", mRegister.regs8[Reg8::A]);
     if (mRegister.regs8[Reg8::F] & 0x80)
         fprintf(f, "Z");
@@ -84,7 +79,8 @@ void CPU::debug(uint32_t cycles)
         fprintf(f, "-");
     fprintf(f, " BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x  (cy: %d)\n", mRegister.regs16[Reg16::BC],
             mRegister.regs16[Reg16::DE], mRegister.regs16[Reg16::HL], mRegister.sp, mRegister.pc, cycles);
-    //    fclose(f);
+    fclose(f);
+#endif
 }
 
 uint8_t CPU::step()

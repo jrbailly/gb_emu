@@ -4,12 +4,8 @@
 
 Application::Application()
 {
-    if (SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS))
-    {
-        SDL_Quit();
-    }
-    else
-        std::cerr << "SDL_Init : " << SDL_GetError() << std::endl;
+    if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS))
+        throw std::runtime_error(std::string("SDL_Init : ") + SDL_GetError());
 }
 
 auto Application::MainLoop(const Config &Configuration) -> void
@@ -17,4 +13,5 @@ auto Application::MainLoop(const Config &Configuration) -> void
     mEmulator = std::make_unique<Emulator>(Configuration);
     mEmulator->init();
     mEmulator->loop();
+    SDL_Quit();
 }

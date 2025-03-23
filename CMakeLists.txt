@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 #set(CMAKE_CXX_COMPILER /usr/lib/emscripten/emcc)
 #set(CMAKE_ASM_COMPILER /usr/lib/emscripten/emcc)
 
-find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared PATHS "C:\\workspace\\SDL3-3.2.8")
+find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared PATHS "D:\\workspace\\SDL3-3.2.8")
 
 file(GLOB_RECURSE SRCS src/*.cpp)
 include_directories ("inc")

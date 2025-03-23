@@ -9,6 +9,7 @@ LCD::LCD(MBC1 &ram) : mRAM(ram)
     mRenderer = SDL_CreateRenderer(mWindow, NULL);
     mSurfaceSprites = SDL_CreateSurface(line_width, 2 * height_tiles, SDL_PIXELFORMAT_RGBA8888);
     mSurfaceBackground = SDL_CreateSurface(line_width, height_tiles, SDL_PIXELFORMAT_RGBA8888);
+    SDL_SetRenderVSync(mRenderer, 1);
     mColors[GrayLevel::WHITE] = 0xFFFFFFFF;
     mColors[GrayLevel::LIGHT_GRAY] = 0xD3D3D3FF;
     mColors[GrayLevel::DARK_GRAY] = 0xA9A9A9FF;
@@ -38,7 +39,7 @@ void LCD::step(uint32_t cycles_count, uint16_t last_addr)
         uint8_t ly = mRAM[Register::LY] + 1;
 
         mRAM.write(Register::LY, ly);
-        mNext_line_cycle = cycles_per_line;
+        mNext_line_cycle = cycles_per_line + cycles_count;
         if (ly == 144) // vblank
             mRAM.write(CPU::Register::IF, 0x1);
         updateStat();
