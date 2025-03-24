@@ -3,7 +3,7 @@
 #include <array>
 #include <iomanip>
 #include <iostream>
-APU::APU(MBC1 &ram) : mRAM(ram)
+APU::APU(RamBus &ram) : mRAM(ram)
 {
     mTotalCycle = 0;
     mNextCycle = SAMPLE_PERIOD;
@@ -28,25 +28,25 @@ void APU::init_sdl()
         throw std::runtime_error(std::string("SDL_ResumeAudioStreamDevice : ") + SDL_GetError());
 }
 
-void APU::init(MBC1 &ram)
+void APU::init(RamBus &ram)
 {
-    ram.RegisterCallback(Register::NR14, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+    ram.register_callback(Register::NR14, [this](RamBus &ram, int addr, unsigned char val) {
         if (val & 0x80)
             trigger_ch1();
     });
-    ram.RegisterCallback(Register::NR24, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+    ram.register_callback(Register::NR24, [this](RamBus &ram, int addr, unsigned char val) {
         if (val & 0x80)
             trigger_ch2();
     });
-    ram.RegisterCallback(Register::NR34, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+    ram.register_callback(Register::NR34, [this](RamBus &ram, int addr, unsigned char val) {
         if (val & 0x80)
             trigger_ch3();
     });
-    ram.RegisterCallback(Register::NR44, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+    ram.register_callback(Register::NR44, [this](RamBus &ram, int addr, unsigned char val) {
         if (val & 0x80)
             trigger_ch4();
     });
-    ram.RegisterCallback(Register::NR30, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+    ram.register_callback(Register::NR30, [this](RamBus &ram, int addr, unsigned char val) {
         if ((val & 0x80) == 0)
             ram.write(NR52, ram[NR52] & ~(1 << 3));
     });

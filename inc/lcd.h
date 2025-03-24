@@ -59,8 +59,8 @@ class LCD
         BLACK,
         TRANSPARENT
     };
-    LCD(MBC1 &ram);
-    void init(MBC1 &ram);
+    LCD(RamBus &ram);
+    void init(RamBus &ram);
     void step(uint32_t cycles_count);
     void renderer();
     void reset();
@@ -76,7 +76,7 @@ class LCD
     void drawBackgroundLine();
 
   private:
-    MBC1 &mRAM;
+    RamBus &mRAM;
     int mNext_line_cycle;
     SDL_Window *mWindow;
     SDL_Renderer *mRenderer;

@@ -5,7 +5,7 @@
 #include <thread>
 
 Emulator::Emulator(const Config &configuration)
-    : mRAM(configuration.mRomFile), mCPU(std::make_unique<CPU>(mRAM)), mLCD(std::make_unique<LCD>(mRAM)),
+    : mRAM(), mCPU(std::make_unique<CPU>(mRAM)), mLCD(std::make_unique<LCD>(mRAM)),
       mControllers(std::make_unique<Controllers>()), mTimer(std::make_unique<Timer>()),
       mAPU(std::make_unique<APU>(mRAM)), mCartridge(std::make_unique<Cartridge>()), mConfig(configuration)
 {
@@ -17,14 +17,14 @@ Emulator::~Emulator()
 
 void Emulator::init()
 {
-    mCartridge->ReadROM(mConfig.mRomFile);
-    mCartridge->LoadROM(mRAM);
+    mCartridge->read_rom(mConfig.mRomFile);
+    mCartridge->load_rom(mRAM);
     mCartridge->init(mRAM);
     mAPU->init(mRAM);
     mControllers->init(mRAM);
     mLCD->init(mRAM);
     mTimer->init(mRAM);
-    mRAM.LoadSaveRAM();
+    mRAM.load_ram(mConfig.mRomFile);
 }
 
 void Emulator::loop()
@@ -37,7 +37,7 @@ void Emulator::loop()
     std::thread worker([&]() {
         while (true)
         {
-            mRAM.SaveRAM();
+            mRAM.save_ram(mConfig.mRomFile);
             std::this_thread::sleep_for(std::chrono::minutes(1));
         }
     });
@@ -53,7 +53,7 @@ void Emulator::loop()
             switch (event.type)
             {
             case SDL_EVENT_QUIT:
-                mRAM.SaveRAM();
+                mRAM.save_ram(mConfig.mRomFile);
                 return;
                 break;
             case SDL_EVENT_KEY_DOWN:

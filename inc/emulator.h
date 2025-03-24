@@ -26,7 +26,7 @@ class Emulator
     std::unique_ptr<CPU> mCPU;
     std::unique_ptr<LCD> mLCD;
     std::unique_ptr<Timer> mTimer;
-    MBC1 mRAM;
+    RamBus mRAM;
     const Config mConfig;
 };
 

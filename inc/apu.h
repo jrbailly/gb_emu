@@ -50,8 +50,8 @@ class APU
         NR52 = 0xFF26,
         WAVE_RAM = 0xFF30,
     };
-    APU(MBC1 &ram);
-    void init(MBC1 &ram);
+    APU(RamBus &ram);
+    void init(RamBus &ram);
     void step(uint32_t cycles_count);
     void flush();
     void callback(int additional_amount, int total_amount);
@@ -71,7 +71,7 @@ class APU
     void mixer();
 
   private:
-    MBC1 &mRAM;
+    RamBus &mRAM;
     int mTotalCycle;
     int mNextCycle;
     int mSweepCycle;

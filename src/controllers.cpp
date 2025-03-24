@@ -4,9 +4,9 @@ Controllers::Controllers() : mDpads(0xf), mButtons(0xf)
 {
 }
 
-auto Controllers::init(MBC1 &ram) -> void
+auto Controllers::init(RamBus &ram) -> void
 {
-    ram.RegisterCallback(Register::JOYP, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
+    ram.register_callback(Register::JOYP, [this](RamBus &ram, int addr, unsigned char val) {
         uint8_t value = val & 0x30;
 
         if (value & 0x20 && mDpads != 0xF)

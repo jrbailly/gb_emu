@@ -40,7 +40,7 @@ constexpr std::array<uint16_t, 2048> intToBcd = [] {
     return arr;
 }();
 
-CPU::CPU(MBC1 &ram) : mRAM(ram)
+CPU::CPU(RamBus &ram) : mRAM(ram)
 {
     mRegister.ie = 0;
     mRegister.pc = 0x100;

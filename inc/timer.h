@@ -15,8 +15,8 @@ class Timer
         TAC = 0xFF07
     };
     Timer();
-    void init(MBC1 &ram);
-    void step(MBC1 &ram, uint32_t cycles_count);
+    void init(RamBus &ram);
+    void step(RamBus &ram, int cycles_count);
     void reset();
 
   private:

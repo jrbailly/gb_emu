@@ -32,6 +32,7 @@ int main(int argc, char **argv)
 
     // if (ParseCommandLine(argc, argv, Configuration))
     // Configuration.mRomFile = "/media/data/workspace/gb_emu/Mario's Picross (USA, Europe) (SGB Enhanced).gb";
+    //    Configuration.mRomFile = "/media/data/workspace/gb_emu/cpu_instrs.gb";
     Configuration.mRomFile = "/media/data/workspace/gb_emu/Super Mario Land (World).gb";
     // Configuration.mRomFile = "d:\\workspace\\gb_emu\\sound.gb";
     {

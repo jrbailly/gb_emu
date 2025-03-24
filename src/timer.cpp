@@ -9,10 +9,10 @@ Timer::Timer() : mNextCycleDiv(0), mNextCycleTima(0), mCycleTima(0)
     mClocksCycles[3] = 256;
 }
 
-void Timer::init(MBC1 &ram)
+void Timer::init(RamBus &ram)
 {
-    ram.RegisterCallback(Register::TAC, [this](MBC1 &ram, uint16_t addr, uint8_t val) {
-        uint8_t clock = val & 0x3;
+    ram.register_callback(Register::TAC, [this](RamBus &ram, int addr, unsigned char val) {
+        int clock = val & 0x3;
 
         if (val & 0x4)
         {
@@ -24,19 +24,19 @@ void Timer::init(MBC1 &ram)
     });
 }
 
-void Timer::step(MBC1 &ram, uint32_t cycles_count)
+void Timer::step(RamBus &ram, int cycles_count)
 {
     if (mNextCycleDiv <= 0)
     {
-        uint8_t div = ram[Register::DIV] + 1;
+        unsigned char div = ram[Register::DIV] + 1;
 
         ram.write(Register::DIV, div);
         mNextCycleDiv = cycles_div + cycles_count;
     }
     if (mNextCycleTima <= 0 && mCycleTima > 0)
     {
-        uint8_t tima = ram[Register::TIMA];
-        uint8_t tma = ram[Register::TMA];
+        unsigned char tima = ram[Register::TIMA];
+        unsigned char tma = ram[Register::TMA];
 
         if (tima == 0xFF)
         {

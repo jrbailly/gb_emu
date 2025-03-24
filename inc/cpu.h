@@ -5,6 +5,7 @@
 #include "ram.h"
 #include <array>
 #include <cstddef>
+#include <cstdint>
 static constexpr size_t OPCODE_SIZE = 0xFF;
 static constexpr int CPU_FREQ = 4194304;
 
@@ -23,7 +24,7 @@ class CPU
 {
 
   public:
-    CPU(MBC1 &ram);
+    CPU(RamBus &ram);
     void debug(uint32_t cycles);
     uint8_t step();
 
@@ -115,7 +116,7 @@ class CPU
 
   private:
     Registers mRegister;
-    MBC1 &mRAM;
+    RamBus &mRAM;
     std::array<Reg8, 8> mMapReg;
 };
 

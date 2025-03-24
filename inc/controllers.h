@@ -27,13 +27,13 @@ class Controllers
     };
 
     Controllers();
-    auto init(MBC1 &ram) -> void;
+    auto init(RamBus &ram) -> void;
     void setInput(SDL_GamepadButtonEvent &event);
     void setInput(SDL_KeyboardEvent &event);
 
   private:
-    uint8_t mDpads;
-    uint8_t mButtons;
+    int mDpads;
+    int mButtons;
 };
 
 #endif
