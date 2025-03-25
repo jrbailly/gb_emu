@@ -43,6 +43,8 @@ void LCD::init(RamBus &ram)
 
 void LCD::step(uint32_t cycles_count)
 {
+    uint8_t interrupt = mRAM[CPU::Register::IF];
+
     if (mNext_line_cycle <= 0)
     {
         uint8_t ly = mRAM[Register::LY] + 1;
@@ -50,7 +52,7 @@ void LCD::step(uint32_t cycles_count)
         mRAM.write(Register::LY, ly);
         mNext_line_cycle = cycles_per_line + cycles_count;
         if (ly == 144) // vblank
-            mRAM.write(CPU::Register::IF, 0x1);
+            mRAM.write(CPU::Register::IF, interrupt | 0x1);
         updateStat();
         if ((mRAM[Register::LCDC] & LCD_ENABLE) && (mRAM[Register::LCDC] & BG_ENABLE) && (ly % 8) == 0)
             drawBackgroundLine();
@@ -70,6 +72,8 @@ void LCD::renderer()
             SDL_DestroyTexture(mTextureBackground);
         mTextureSprites = SDL_CreateTextureFromSurface(mRenderer, mSurfaceSprites);
         mTextureBackground = SDL_CreateTextureFromSurface(mRenderer, mSurfaceBackground);
+        SDL_SetTextureScaleMode(mTextureSprites, SDL_SCALEMODE_NEAREST);
+        SDL_SetTextureScaleMode(mTextureBackground, SDL_SCALEMODE_NEAREST);
     }
     if (mRAM[Register::LCDC] & LCD_ENABLE)
     {
@@ -188,7 +192,6 @@ void LCD::drawSprites()
     SDL_FRect dst;
     SDL_FlipMode flip;
 
-    SDL_SetTextureScaleMode(mTextureSprites, SDL_SCALEMODE_NEAREST);
     for (int i = 0; i < 40; ++i)
     {
         flip = SDL_FLIP_NONE;
@@ -225,7 +228,7 @@ void LCD::drawBackgroundLine()
 {
     int address = BackgroundAddress::AREA0;
     int line = mRAM[LY];
-    int y = mRAM[SCY] + line;
+    int y = (mRAM[SCY] + line) % 256;
     int x = mRAM[SCX];
     int y_offset = y % 8;
     int x_offset = x % 8;
@@ -233,7 +236,6 @@ void LCD::drawBackgroundLine()
     SDL_FRect src;
     SDL_FRect dst;
 
-    SDL_SetTextureScaleMode(mTextureBackground, SDL_SCALEMODE_NEAREST);
     if (mRAM[Register::LCDC] & BG_TILE_AREA)
         address = BackgroundAddress::AREA1;
     for (int dst_x = 0; dst_x <= 20; ++dst_x)

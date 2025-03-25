@@ -103,7 +103,7 @@ class CPU
     void call(uint16_t addr);
     void call_conditionnal(uint8_t opcode, uint16_t addr);
     void ret();
-    void ret_conditionnal(uint8_t opcode);
+    bool ret_conditionnal(uint8_t opcode);
     // miscellaneous instructions
     void HALT();
     void STOP();

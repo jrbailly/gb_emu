@@ -42,6 +42,10 @@ class RamBus
     auto save_ram(const std::string &romfile) -> void;
     auto register_callback(int address, ram_callback fnc) -> void;
     auto register_callback_range(int start_address, unsigned int size, ram_callback fnc) -> void;
+    auto data()
+    {
+        return _ram.data();
+    }
 
   private:
     std::array<unsigned char, Ram::ram_size> _ram;

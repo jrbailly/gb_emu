@@ -4,30 +4,42 @@
 #include <cstdio>
 #include <thread>
 
+/**
+ * @brief Construct a new Emulator object
+ *
+ * @param configuration Configuration
+ */
 Emulator::Emulator(const Config &configuration)
-    : mRAM(), mCPU(std::make_unique<CPU>(mRAM)), mLCD(std::make_unique<LCD>(mRAM)),
-      mControllers(std::make_unique<Controllers>()), mTimer(std::make_unique<Timer>()),
-      mAPU(std::make_unique<APU>(mRAM)), mCartridge(std::make_unique<Cartridge>()), mConfig(configuration)
+    : _ram(), _cpu(std::make_unique<CPU>(_ram)), _lcd(std::make_unique<LCD>(_ram)),
+      _controllers(std::make_unique<Controllers>()), _timer(std::make_unique<Timer>()),
+      _apu(std::make_unique<APU>(_ram)), _cartridge(std::make_unique<Cartridge>()), _config(configuration)
 {
 }
 
-Emulator::~Emulator()
+/**
+ * @brief Init emulator.
+ * - Load rom
+ * - Register write callback in peripherals.
+ * - Load last saved memory
+ *
+ */
+auto Emulator::init() -> void
 {
+    _cartridge->read_rom(_config.mRomFile);
+    _cartridge->load_rom(_ram);
+    _cartridge->init(_ram);
+    _apu->init(_ram);
+    _controllers->init(_ram);
+    _lcd->init(_ram);
+    _timer->init(_ram);
+    _ram.load_ram(_config.mRomFile);
 }
 
-void Emulator::init()
-{
-    mCartridge->read_rom(mConfig.mRomFile);
-    mCartridge->load_rom(mRAM);
-    mCartridge->init(mRAM);
-    mAPU->init(mRAM);
-    mControllers->init(mRAM);
-    mLCD->init(mRAM);
-    mTimer->init(mRAM);
-    mRAM.load_ram(mConfig.mRomFile);
-}
-
-void Emulator::loop()
+/**
+ * @brief Mainloop
+ *
+ */
+auto Emulator::loop() -> void
 {
     uint32_t cycles = 0;
     uint32_t cycles_count = 0;
@@ -37,7 +49,7 @@ void Emulator::loop()
     std::thread worker([&]() {
         while (true)
         {
-            mRAM.save_ram(mConfig.mRomFile);
+            _ram.save_ram(_config.mRomFile);
             std::this_thread::sleep_for(std::chrono::minutes(1));
         }
     });
@@ -53,43 +65,42 @@ void Emulator::loop()
             switch (event.type)
             {
             case SDL_EVENT_QUIT:
-                mRAM.save_ram(mConfig.mRomFile);
+                _ram.save_ram(_config.mRomFile);
                 return;
                 break;
             case SDL_EVENT_KEY_DOWN:
-                mControllers->setInput(event.key);
+                _controllers->setInput(event.key);
                 break;
             case SDL_EVENT_KEY_UP:
-                mControllers->setInput(event.key);
+                _controllers->setInput(event.key);
                 break;
             case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-                mControllers->setInput(event.gbutton);
+                _controllers->setInput(event.gbutton);
                 break;
             case SDL_EVENT_GAMEPAD_BUTTON_UP:
-                mControllers->setInput(event.gbutton);
+                _controllers->setInput(event.gbutton);
                 break;
             default:
                 break;
             }
         }
-        mLCD->reset();
-        mTimer->reset();
-        while (cycles_count < 70224)
+        _lcd->reset();
+        while (cycles_count < frame_cycle_count)
         {
-            // mCPU->debug(cycles);
-            cycles = mCPU->step();
-            mLCD->step(cycles);
-            mAPU->step(cycles);
-            mTimer->step(mRAM, cycles);
+            //_cpu->debug(cycles_count);
+            cycles = _cpu->step();
+            _lcd->step(cycles);
+            _apu->step(cycles);
+            _timer->step(_ram, cycles);
             cycles_count += cycles;
         }
-        mLCD->renderer();
-        mAPU->flush();
+        _lcd->renderer();
+        _apu->flush();
         auto end_time = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
-        SDL_DelayPrecise(1000.0 * (16742 - elapsed));
-        /*FILE *f = fopen("ram", "wb");
-        fwrite(&(*mRAM.begin()), 65535, 1, f);
-        fclose(f);*/
+        SDL_DelayPrecise(1000.0 * (frame_duration - elapsed));
+        FILE *f = fopen("ram", "wb");
+        fwrite(_ram.data(), 1, 65535, f);
+        fclose(f);
     }
 }

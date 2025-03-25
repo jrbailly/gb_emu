@@ -6,6 +6,9 @@
 #include <SDL3/SDL.h>
 
 const int cycles_per_line = 456;
+const int max_lines = 154;
+const int frame_cycle_count = cycles_per_line * max_lines;
+const int frame_duration = ((long long int)frame_cycle_count * 1000000) / CPU_FREQ;
 const int max_tiles = 512;
 const int width_tiles = 8;
 const int height_tiles = 8;

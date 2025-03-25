@@ -1,9 +1,10 @@
 #ifndef _TIMER_H_
 #define _TIMER_H_
 
+#include "cpu.h"
 #include "ram.h"
 
-const int cycles_div = 256;
+static constexpr int cycles_per_div_increment = CPU_FREQ / 16384;
 class Timer
 {
   public:
@@ -15,14 +16,13 @@ class Timer
         TAC = 0xFF07
     };
     Timer();
-    void init(RamBus &ram);
-    void step(RamBus &ram, int cycles_count);
-    void reset();
+    auto init(RamBus &ram) -> void;
+    auto step(RamBus &ram, int cycles_count) -> void;
 
   private:
-    int mNextCycleDiv;
-    int mNextCycleTima;
-    int mCycleTima;
-    int mClocksCycles[4];
+    int _next_cycle_div;
+    int _next_cycle_tima;
+    int _cycle_tima;
+    int _clocks_cycles[4];
 };
 #endif

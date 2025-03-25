@@ -1,5 +1,5 @@
 #include "cpu.h"
-#include "stdio.h"
+#include "timer.h"
 #include <array>
 #include <cstdint>
 
@@ -77,8 +77,8 @@ void CPU::debug(uint32_t cycles)
         fprintf(f, "C");
     else
         fprintf(f, "-");
-    fprintf(f, " BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x  (cy: %d)\n", mRegister.regs16[Reg16::BC],
-            mRegister.regs16[Reg16::DE], mRegister.regs16[Reg16::HL], mRegister.sp, mRegister.pc, cycles);
+    fprintf(f, " BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x  IF:%02X (cy: %d)\n", mRegister.regs16[Reg16::BC],
+            mRegister.regs16[Reg16::DE], mRegister.regs16[Reg16::HL], mRegister.sp, mRegister.pc, mRAM[IF], cycles);
     fclose(f);
     // #endif
 }
@@ -115,6 +115,7 @@ uint8_t CPU::decode()
     uint16_t carry = (mRegister.regs8[Reg8::F] >> 4) & 1;
     int8_t relative;
     int8_t cycles_count = 0;
+    bool result;
 
     switch (opcode)
     {
@@ -615,9 +616,9 @@ uint8_t CPU::decode()
     case (0xc8):
     case (0xd0):
     case (0xd8):
-        ret_conditionnal(opcode);
+        result = ret_conditionnal(opcode);
         cycles_count = 5;
-        if (mRegister.pc != value)
+        if (!result)
             cycles_count = 2;
         break;
     case (0xd9):
@@ -1405,14 +1406,18 @@ inline void CPU::ret()
     mRegister.pc = addr;
 }
 
-inline void CPU::ret_conditionnal(uint8_t opcode)
+inline bool CPU::ret_conditionnal(uint8_t opcode)
 {
     uint8_t cc = (opcode >> 3) & 0x3;
     uint8_t c = (mRegister.regs8[Reg8::F] & Flags::c) >> 4;
     uint8_t z = (mRegister.regs8[Reg8::F] & Flags::z) >> 7;
 
     if ((cc == 0 && z == 0) || (cc == 1 && z == 1) || (cc == 2 && c == 0) || (cc == 3 && c == 1))
+    {
         ret();
+        return (true);
+    }
+    return (false);
 }
 
 inline void CPU::HALT()
@@ -1421,6 +1426,7 @@ inline void CPU::HALT()
 
 inline void CPU::STOP()
 {
+    mRAM.write(Timer::Register::DIV, 0);
 }
 
 inline void CPU::di()
