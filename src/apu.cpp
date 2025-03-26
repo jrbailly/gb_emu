@@ -223,7 +223,7 @@ void APU::process_ch4()
         if (mChannels[3].volume > 0xF)
             mChannels[3].volume = 0xF;
     }
-    if (mChannels[3].step % freq == 0)
+    if (freq != 0 && mChannels[3].step % freq == 0)
     {
         feedback = (lfsr ^ (lfsr >> 1)) & 1;
         lfsr = (lfsr >> 1) | (feedback << 15);

@@ -8,7 +8,7 @@ bool ParseCommandLine(int argc, char **argv, Config &config)
     int option = 0;
     bool Valid = false;
 
-    /*while ((option = getopt(argc, argv, "f:")) != -1)
+    while ((option = getopt(argc, argv, "f:")) != -1)
     {
         switch (option)
         {
@@ -16,10 +16,15 @@ bool ParseCommandLine(int argc, char **argv, Config &config)
             config.mRomFile = optarg;
             Valid = true;
             break;
+        case 's':
+            config._screen_scale = atoi(optarg);
+            Valid = true;
+            break;
+
         default:
             break;
         }
-    }*/
+    }
     if (!Valid)
         std::cout << argv[0] << " -f <filename>" << std::endl;
     return (Valid);
@@ -32,8 +37,8 @@ int main(int argc, char **argv)
 
     // if (ParseCommandLine(argc, argv, Configuration))
     // Configuration.mRomFile = "/media/data/workspace/gb_emu/Mario's Picross (USA, Europe) (SGB Enhanced).gb";
-    Configuration.mRomFile = "/media/data/workspace/gb_emu/cpu_instrs.gb";
-    //    Configuration.mRomFile = "/media/data/workspace/gb_emu/Super Mario Land (World).gb";
+    // Configuration.mRomFile = "/media/data/workspace/gb_emu/cpu_instrs.gb";
+    Configuration.mRomFile = "/media/data/workspace/gb_emu/Super Mario Land (World).gb";
     // Configuration.mRomFile = "d:\\workspace\\gb_emu\\sound.gb";
     {
         try

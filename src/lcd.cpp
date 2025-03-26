@@ -3,255 +3,385 @@
 #include <cstdio>
 #include <functional>
 
-LCD::LCD(RamBus &ram) : mRAM(ram)
+/**
+ * @brief Construct a new LCD object
+ *
+ * @param ram
+ */
+LCD::LCD(RamBus &ram) : _ram(ram), _scale(1)
 {
-    mNext_line_cycle = 456;
-    mWindow = SDL_CreateWindow("", 480, 432, 0);
-    mRenderer = SDL_CreateRenderer(mWindow, NULL);
-    mSurfaceSprites = SDL_CreateSurface(line_width, 2 * height_tiles, SDL_PIXELFORMAT_RGBA8888);
-    mSurfaceBackground = SDL_CreateSurface(line_width, height_tiles, SDL_PIXELFORMAT_RGBA8888);
-    SDL_SetRenderVSync(mRenderer, 1);
-    mColors[GrayLevel::WHITE] = 0xFFFFFFFF;
-    mColors[GrayLevel::LIGHT_GRAY] = 0xD3D3D3FF;
-    mColors[GrayLevel::DARK_GRAY] = 0xA9A9A9FF;
-    mColors[GrayLevel::BLACK] = 0x000000FF;
-    mColors[GrayLevel::TRANSPARENT] = 0x0;
-    mBGP0[0] = mColors[GrayLevel::WHITE];
-    mBGP0[1] = mColors[GrayLevel::LIGHT_GRAY];
-    mBGP0[2] = mColors[GrayLevel::DARK_GRAY];
-    mBGP0[3] = mColors[GrayLevel::BLACK];
-    mTextureSprites = nullptr;
-    mTextureBackground = nullptr;
-    mReloadSurface = true;
+    _next_line_cycle = cycles_per_line;
+    _colors[GrayLevel::TRANSPARENT] = 0x0;
+    _colors[GrayLevel::LIGHT_GRAY] = 0xA0A0A0FF;
+    _colors[GrayLevel::DARK_GRAY] = 0x585858FF;
+    _colors[GrayLevel::BLACK] = 0x000000FF;
+    _colors[GrayLevel::WHITE] = 0xFFFFFFFF;
+    _BGP0[0] = _colors[GrayLevel::TRANSPARENT];
+    _BGP0[1] = _colors[GrayLevel::LIGHT_GRAY];
+    _BGP0[2] = _colors[GrayLevel::DARK_GRAY];
+    _BGP0[3] = _colors[GrayLevel::BLACK];
+    _window = nullptr;
+    _renderer = nullptr;
+    _surface_sprites = nullptr;
+    _texture_sprites = nullptr;
+    _surface_background = nullptr;
+    _texture_background = nullptr;
+    _reload_surface = true;
+}
+
+LCD::~LCD()
+{
+    destroy_window();
+}
+
+void LCD::create_window()
+{
+    destroy_window();
+    _window = SDL_CreateWindow("", _scale * screen_width, _scale * screen_height, 0);
+    if (!_window)
+        throw std::runtime_error(std::string("SDL_CreateWindow : ") + SDL_GetError());
+    _renderer = SDL_CreateRenderer(_window, NULL);
+    if (!_renderer)
+        throw std::runtime_error(std::string("SDL_CreateRenderer : ") + SDL_GetError());
+    _surface_sprites = SDL_CreateSurface(line_width, 2 * tiles_height, SDL_PIXELFORMAT_RGBA8888);
+    if (!_surface_sprites)
+        throw std::runtime_error(std::string("SDL_CreateSurface : ") + SDL_GetError());
+    _surface_background = SDL_CreateSurface(line_width, tiles_height, SDL_PIXELFORMAT_RGBA8888);
+    if (!_surface_background)
+        throw std::runtime_error(std::string("SDL_CreateSurface : ") + SDL_GetError());
+    if (!SDL_SetRenderDrawColor(_renderer, 255, 255, 255, 255))
+        throw std::runtime_error(std::string("SDL_SetRenderDrawColor : ") + SDL_GetError());
+}
+
+void LCD::destroy_window()
+{
+    if (_window)
+        SDL_DestroyWindow(_window);
+    if (_renderer)
+        SDL_DestroyRenderer(_renderer);
+    if (_surface_sprites)
+        SDL_DestroySurface(_surface_sprites);
+    if (_surface_background)
+        SDL_DestroySurface(_surface_background);
 }
 
 void LCD::init(RamBus &ram)
 {
-    ram.register_callback(Register::BGP, [this](RamBus &ram, int addr, unsigned char val) { this->updateBGP0(); });
-    ram.register_callback(Register::OBP0, [this](RamBus &ram, int addr, unsigned char val) { this->updateOBP0(); });
-    ram.register_callback(Register::OBP1, [this](RamBus &ram, int addr, unsigned char val) { this->updateBGP1(); });
+    ram.register_callback(Register::BGP, [this](RamBus &ram, int addr, unsigned char val) { this->update_BGP0(); });
+    ram.register_callback(Register::OBP0, [this](RamBus &ram, int addr, unsigned char val) { this->update_OBP0(); });
+    ram.register_callback(Register::OBP1, [this](RamBus &ram, int addr, unsigned char val) { this->update_BGP1(); });
     ram.register_callback(Register::DMA, [this](RamBus &ram, int addr, unsigned char val) {
-        uint16_t start_address = val << 8;
-        uint16_t end_address = start_address + 160;
-        uint16_t dst_address = 0xFE00;
-        for (int i = 0; i < 160; ++i)
+        int start_address = val << 8;
+        int end_address = start_address + oam_size;
+        int dst_address = Register::OAM;
+        for (int i = 0; i < oam_size; ++i)
             ram.write(dst_address + i, ram[start_address + i]);
     });
-    for (int i = 0x8000; i < 0x9800; ++i)
-        ram.register_callback(i, [this](RamBus &ram, int addr, unsigned char val) { mReloadSurface = true; });
+    ram.register_callback_range(TilesAddress::BLOCK0, tiles_memory_size,
+                                [this](RamBus &ram, int addr, unsigned char val) { _reload_surface = true; });
+    create_window();
 }
 
-void LCD::step(uint32_t cycles_count)
+void LCD::step(int cycles_count)
 {
-    uint8_t interrupt = mRAM[CPU::Register::IF];
+    unsigned char interrupt;
 
-    if (mNext_line_cycle <= 0)
+    _next_line_cycle -= cycles_count;
+    if (_next_line_cycle <= 0)
     {
-        uint8_t ly = mRAM[Register::LY] + 1;
+        unsigned char ly = (_ram[Register::LY] + 1) % max_lines;
 
-        mRAM.write(Register::LY, ly);
-        mNext_line_cycle = cycles_per_line + cycles_count;
-        if (ly == 144) // vblank
-            mRAM.write(CPU::Register::IF, interrupt | 0x1);
-        updateStat();
-        if ((mRAM[Register::LCDC] & LCD_ENABLE) && (mRAM[Register::LCDC] & BG_ENABLE) && (ly % 8) == 0)
-            drawBackgroundLine();
+        interrupt = _ram[CPU::Register::IF];
+        _ram.write(Register::LY, ly);
+        _next_line_cycle += cycles_per_line;
+        // vblank
+        if (ly == 144)
+            _ram.write(CPU::Register::IF, interrupt | 0x1);
+        update_stat();
+        scanline();
     }
-    mNext_line_cycle -= cycles_count;
 }
 
 void LCD::renderer()
 {
-    if (mReloadSurface)
+    if (_reload_surface)
     {
-        loadSurfaceBackground();
-        loadSurfaceSprites();
-        if (mTextureSprites)
-            SDL_DestroyTexture(mTextureSprites);
-        if (mTextureBackground)
-            SDL_DestroyTexture(mTextureBackground);
-        mTextureSprites = SDL_CreateTextureFromSurface(mRenderer, mSurfaceSprites);
-        mTextureBackground = SDL_CreateTextureFromSurface(mRenderer, mSurfaceBackground);
-        SDL_SetTextureScaleMode(mTextureSprites, SDL_SCALEMODE_NEAREST);
-        SDL_SetTextureScaleMode(mTextureBackground, SDL_SCALEMODE_NEAREST);
+        load_surface_background();
+        load_surface_sprites();
+        if (_texture_sprites)
+            SDL_DestroyTexture(_texture_sprites);
+        if (_texture_background)
+            SDL_DestroyTexture(_texture_background);
+        _texture_sprites = SDL_CreateTextureFromSurface(_renderer, _surface_sprites);
+        if (!_texture_sprites)
+            throw std::runtime_error(std::string("SDL_CreateTextureFromSurface : ") + SDL_GetError());
+        _texture_background = SDL_CreateTextureFromSurface(_renderer, _surface_background);
+        if (!_texture_background)
+            throw std::runtime_error(std::string("SDL_CreateTextureFromSurface : ") + SDL_GetError());
+        SDL_SetTextureScaleMode(_texture_sprites, SDL_SCALEMODE_NEAREST);
+        SDL_SetTextureScaleMode(_texture_background, SDL_SCALEMODE_NEAREST);
+        _reload_surface = false;
     }
-    if (mRAM[Register::LCDC] & LCD_ENABLE)
+    if (_ram[Register::LCDC] & LCD_ENABLE)
     {
-        if (mRAM[Register::LCDC] & OBJ_ENABLE)
-            drawSprites();
-        SDL_SetRenderScale(mRenderer, 3, 3);
-        SDL_RenderPresent(mRenderer);
-        SDL_RenderClear(mRenderer);
+        if (!SDL_SetRenderScale(_renderer, _scale, _scale))
+            throw std::runtime_error(std::string("SDL_SetRenderScale : ") + SDL_GetError());
+        if (!SDL_RenderPresent(_renderer))
+            throw std::runtime_error(std::string("SDL_RenderPresent : ") + SDL_GetError());
+        if (!SDL_RenderClear(_renderer))
+            throw std::runtime_error(std::string("SDL_RenderClear : ") + SDL_GetError());
     }
 }
 
-void LCD::reset()
+void LCD::set_scale(int scale)
 {
-    mNext_line_cycle = cycles_per_line;
-    mRAM.write(Register::LY, -1);
-    mReloadSurface = false;
+    _scale = scale;
+    destroy_window();
+    create_window();
 }
 
-void LCD::updateStat()
+void LCD::scanline()
 {
-    uint8_t stat = mRAM[Register::STAT] & 0xF8;
-    uint8_t ly = mRAM[Register::LY];
-    uint8_t lyc = mRAM[Register::LYC];
-    uint8_t interrupt = mRAM[CPU::Register::IF];
-    uint8_t mode = 0;
+    bool display_window_line = false;
+
+    if (_ram[Register::LCDC] & LCD_ENABLE)
+    {
+        if (_ram[Register::LCDC] & OBJ_ENABLE)
+            draw_sprites(true);
+        if (_ram[Register::LCDC] & WIN_ENABLE)
+            display_window_line = draw_window_line();
+        if (_ram[Register::LCDC] & BG_ENABLE && !display_window_line)
+            draw_background_line();
+        if (_ram[Register::LCDC] & OBJ_ENABLE)
+            draw_sprites(false);
+    }
+}
+
+void LCD::update_stat()
+{
+    unsigned char stat = _ram[Register::STAT] & 0xF8;
+    unsigned char ly = _ram[Register::LY];
+    unsigned char lyc = _ram[Register::LYC];
+    unsigned char interrupt = _ram[CPU::Register::IF];
 
     if (ly >= 144)
         stat |= 0x1;
+    else
+        stat |= 0x0;
     if (ly == lyc)
-        stat |= 0x4;
-    if ((stat & 0x10) && (ly == 144))
+        stat |= LYC_LY;
+    if ((stat & MODE1_INT) && (ly == 144))
         interrupt |= 0x2;
-    if ((stat & 0x40) && (ly == lyc))
+    if ((stat & LYC_INT) && (ly == lyc))
         interrupt |= 0x2;
-    mRAM.write(CPU::Register::IF, interrupt);
-    mRAM.write(Register::STAT, stat);
+    _ram.write(CPU::Register::IF, interrupt);
+    _ram.write(Register::STAT, stat);
 }
 
-void LCD::updateBGP0()
+void LCD::update_BGP0()
 {
-    uint8_t palette = mRAM[Register::BGP];
+    unsigned char palette = _ram[Register::BGP];
 
     for (int i = 0; i < 8; i += 2)
-        mBGP0[i / 2] = mColors[(palette >> i) & 0x3];
-    mReloadSurface = true;
+        _BGP0[i / 2] = _colors[(palette >> i) & 0x3];
+    _reload_surface = true;
 }
 
-void LCD::updateOBP0()
+void LCD::update_OBP0()
 {
-    uint8_t palette = mRAM[Register::OBP0];
+    unsigned char palette = _ram[Register::OBP0];
+    unsigned char color;
 
     for (int i = 2; i < 8; i += 2)
-        mOBP0[i / 2] = mColors[(palette >> i) & 0x3];
-    mOBP0[0] = mColors[GrayLevel::TRANSPARENT];
-    mReloadSurface = true;
+    {
+        color = (palette >> i) & 0x3;
+        if (color == 0)
+            _OBP0[i / 2] = _colors[WHITE];
+        else
+            _OBP0[i / 2] = _colors[color];
+    }
+    _OBP0[0] = _colors[GrayLevel::TRANSPARENT];
+    _reload_surface = true;
 }
 
-void LCD::updateBGP1()
+void LCD::update_BGP1()
 {
-    uint8_t palette = mRAM[Register::OBP1];
+    unsigned char palette = _ram[Register::OBP1];
+    unsigned char color;
 
     for (int i = 2; i < 8; i += 2)
-        mOBP1[i / 2] = mColors[(palette >> i) & 0x3];
-    mOBP1[0] = mColors[GrayLevel::TRANSPARENT];
-    mReloadSurface = true;
+    {
+        color = (palette >> i) & 0x3;
+        if (color == 0)
+            _OBP1[i / 2] = _colors[WHITE];
+        else
+            _OBP1[i / 2] = _colors[color];
+    }
+    _OBP1[0] = _colors[GrayLevel::TRANSPARENT];
+    _reload_surface = true;
 }
 
-void LCD::loadSurfaceSprites()
+void LCD::load_surface_sprites()
 {
-    uint32_t *datas = static_cast<uint32_t *>(mSurfaceSprites->pixels);
-    uint16_t address = TilesAddress::BLOCK0;
-    uint8_t value;
+    uint32_t *datas = static_cast<uint32_t *>(_surface_sprites->pixels);
+    int address = TilesAddress::BLOCK0;
+    unsigned char value;
 
     for (int i = 0; i < 256; ++i)
     {
-        for (int j = 0; j < height_tiles; ++j)
+        for (int j = 0; j < tiles_height; ++j)
         {
             for (int k = 0; k < 8; k++)
             {
-                value = ((mRAM[address] >> (7 - k)) & 1) | (((mRAM[address + 1] >> (7 - k)) & 1) << 1);
-                datas[(j * line_width) + (i * width_tiles) + k] = mOBP0[value];
-                datas[((j + height_tiles) * line_width) + (i * width_tiles) + k] = mOBP1[value];
+                value = ((_ram[address] >> (7 - k)) & 1) | (((_ram[address + 1] >> (7 - k)) & 1) << 1);
+                datas[(j * line_width) + (i * tiles_width) + k] = _OBP0[value];
+                datas[((j + tiles_height) * line_width) + (i * tiles_width) + k] = _OBP1[value];
             }
             address += 2;
         }
     }
 }
 
-void LCD::loadSurfaceBackground()
+void LCD::load_surface_background()
 {
-    uint32_t *datas = static_cast<uint32_t *>(mSurfaceBackground->pixels);
-    uint16_t address = TilesAddress::BLOCK0;
-    uint8_t value;
+    uint32_t *datas = static_cast<uint32_t *>(_surface_background->pixels);
+    int address = TilesAddress::BLOCK0;
+    unsigned char value;
 
     for (int i = 0; i < 384; ++i)
     {
-        for (int line = 0; line < height_tiles; ++line)
+        for (int line = 0; line < tiles_height; ++line)
         {
             for (int k = 0; k < 8; k++)
             {
-                value = ((mRAM[address] >> (7 - k)) & 1) | (((mRAM[address + 1] >> (7 - k)) & 1) << 1);
-                datas[(line * line_width) + (i * width_tiles) + k] = mBGP0[value];
+                value = ((_ram[address] >> (7 - k)) & 1) | (((_ram[address + 1] >> (7 - k)) & 1) << 1);
+                datas[(line * line_width) + (i * tiles_width) + k] = _BGP0[value];
             }
             address += 2;
         }
     }
 }
 
-void LCD::drawSprites()
+void LCD::draw_sprites(bool priority)
 {
-    uint16_t address = oam_address;
-    uint8_t attribute;
-    uint8_t value;
+    int address = Register::OAM;
+    int attribute;
+    int line = _ram[LY];
+    int y;
+    int height = tiles_height;
+    unsigned char value;
     float angle;
     SDL_FRect src;
     SDL_FRect dst;
     SDL_FlipMode flip;
 
+    if (_ram[LCDC] & LCDC::OBJ_SIZE)
+        height *= 2;
     for (int i = 0; i < 40; ++i)
     {
         flip = SDL_FLIP_NONE;
         angle = 0;
-        dst.y = mRAM[address] - 16;
-        dst.x = mRAM[address + 1] - 8;
-        value = mRAM[address + 2];
-        attribute = mRAM[address + 3];
-
-        src.y = 0;
-        if (attribute & 0x10)
-            src.y = height_tiles;
-        if (attribute & 0x20)
+        y = _ram[address] - 16;
+        dst.x = _ram[address + 1] - 8;
+        value = _ram[address + 2];
+        attribute = _ram[address + 3];
+        if (((attribute & PRIORITY) != 0 && priority) || ((attribute & PRIORITY) == 0 && !priority))
         {
-            flip = SDL_FLIP_VERTICAL;
-            angle = 180;
-        }
-        if (attribute & 0x40)
-        {
-            flip = SDL_FLIP_HORIZONTAL;
-            angle = 180;
+            if (line >= y && line < y + height)
+            {
+                if (line - y >= tiles_height)
+                    value++;
+                src.y = (line - y) % tiles_height;
+                if (attribute & X_FLIP)
+                {
+                    flip = SDL_FLIP_HORIZONTAL;
+                    angle = 0;
+                }
+                if (attribute & Y_FLIP)
+                    src.y = height - 1 - src.y;
+                if (attribute & PALETTE)
+                    src.y += tiles_height;
+                src.x = (value * tiles_width);
+                src.w = tiles_width;
+                src.h = 1;
+                dst.y = line;
+                dst.w = tiles_width;
+                dst.h = 1;
+                SDL_RenderTextureRotated(_renderer, _texture_sprites, &src, &dst, angle, nullptr, flip);
+            }
         }
         address += 4;
-        src.x = (value * width_tiles);
-        src.w = width_tiles;
-        src.h = height_tiles;
-        dst.w = width_tiles;
-        dst.h = height_tiles;
-        SDL_RenderTextureRotated(mRenderer, mTextureSprites, &src, &dst, angle, nullptr, flip);
     }
 }
 
-void LCD::drawBackgroundLine()
+void LCD::draw_background_line()
 {
     int address = BackgroundAddress::AREA0;
-    int line = mRAM[LY];
-    int y = (mRAM[SCY] + line) % 256;
-    int x = mRAM[SCX];
-    int y_offset = y % 8;
-    int x_offset = x % 8;
-    uint16_t value;
+    int line = _ram[LY];
+    int y = (_ram[SCY] + line) % tile_maps_height;
+    int x = _ram[SCX];
+    int x_offset = x % tiles_width;
+    int value;
     SDL_FRect src;
     SDL_FRect dst;
 
-    if (mRAM[Register::LCDC] & BG_TILE_AREA)
+    if (_ram[Register::LCDC] & BG_TILE_AREA)
         address = BackgroundAddress::AREA1;
+    address += ((y / 8) * 32);
     for (int dst_x = 0; dst_x <= 20; ++dst_x)
     {
-        value = mRAM[address + (y * 4 + x / 8)];
-        if (value < 128 && (mRAM[Register::LCDC] & BG_DATA_AREA) == 0)
+        value = _ram[address + (x / 8)];
+        if (value < 128 && (_ram[Register::LCDC] & BG_DATA_AREA) == 0)
             value += 256;
-        src.x = (value * width_tiles);
-        src.y = 0;
-        src.w = width_tiles;
-        src.h = height_tiles;
-        dst.x = (dst_x * width_tiles) - x_offset;
-        dst.y = line - y_offset;
-        dst.w = width_tiles;
-        dst.h = height_tiles;
-        SDL_RenderTexture(mRenderer, mTextureBackground, &src, &dst);
-        x = (x + 8) % 256;
+        src.x = (value * tiles_width);
+        src.y = y % tiles_height;
+        src.w = tiles_width;
+        src.h = 1;
+        dst.x = (dst_x * tiles_width) - x_offset;
+        dst.y = line;
+        dst.w = tiles_width;
+        dst.h = 1;
+        SDL_RenderTexture(_renderer, _texture_background, &src, &dst);
+        x = (x + tiles_width) % tile_maps_width;
     }
+}
+
+auto LCD::draw_window_line() -> bool
+{
+    int address = BackgroundAddress::AREA0;
+    int line = _ram[LY];
+    int y = line - _ram[WY];
+    int x = _ram[WX];
+    int value;
+    SDL_FRect src;
+    SDL_FRect dst;
+    bool show_tile = false;
+
+    if (_ram[Register::LCDC] & WIN_TILE_AREA)
+        address = BackgroundAddress::AREA1;
+    address += ((y / tiles_width) * 32);
+    if (y >= 0)
+    {
+        for (int dst_x = 0; dst_x < 21; ++dst_x)
+        {
+            if (dst_x * tiles_width >= _ram[WX])
+            {
+                value = _ram[address + (x / 8)];
+                if (value < 128 && (_ram[Register::LCDC] & BG_DATA_AREA) == 0)
+                    value += 256;
+                src.x = (value * tiles_width);
+                src.y = line % tiles_height;
+                src.w = tiles_width;
+                src.h = 1;
+                dst.x = (dst_x * tiles_width) - 7;
+                dst.y = line;
+                dst.w = tiles_width;
+                dst.h = 1;
+                SDL_RenderTexture(_renderer, _texture_background, &src, &dst);
+                x = (x + tiles_width) % tile_maps_width;
+                show_tile = true;
+            }
+        }
+    }
+    return (show_tile);
 }

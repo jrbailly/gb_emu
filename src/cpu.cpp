@@ -2,6 +2,7 @@
 #include "timer.h"
 #include <array>
 #include <cstdint>
+#include <fstream>
 
 constexpr std::array<uint16_t, 2048> intToBcd = [] {
     std::array<uint16_t, 2048> arr;
@@ -104,6 +105,36 @@ uint8_t CPU::step()
     }
     cycles_count += decode();
     return (cycles_count);
+}
+
+void CPU::save_state(const std::string &rom_file)
+{
+    std::string filename = rom_file + ".state";
+    std::ofstream output(filename.data(), std::ios::binary);
+    std::streamsize bytesRead;
+
+    if (output)
+    {
+        output.write(reinterpret_cast<const char *>(&mRegister), sizeof(Registers));
+        output.write(reinterpret_cast<const char *>(mRAM.data()), Ram::ram_size);
+    }
+}
+
+void CPU::load_state(const std::string &rom_file)
+{
+    std::string filename = rom_file + ".state";
+    std::ifstream input(filename.data(), std::ios::binary);
+    std::streamsize bytesRead;
+    std::array<unsigned char, Ram::ram_size> block;
+
+    if (input)
+    {
+        input.read(reinterpret_cast<char *>(&mRegister), sizeof(Registers));
+        input.read(reinterpret_cast<char *>(block.data()), Ram::ram_size);
+        bytesRead = input.gcount();
+        if (bytesRead == Ram::ram_size)
+            mRAM.write_range(block.data(), Ram::ram_size, 0);
+    }
 }
 
 uint8_t CPU::decode()

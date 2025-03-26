@@ -27,6 +27,8 @@ class CPU
     CPU(RamBus &ram);
     void debug(uint32_t cycles);
     uint8_t step();
+    void save_state(const std::string &rom_file);
+    void load_state(const std::string &rom_file);
 
   public:
     enum Register

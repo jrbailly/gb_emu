@@ -7,10 +7,10 @@
  */
 Timer::Timer() : _next_cycle_div(0), _next_cycle_tima(0), _cycle_tima(0)
 {
-    _clocks_cycles[0] = (CPU_FREQ / 4096) / 4;
-    _clocks_cycles[1] = (CPU_FREQ / 262144) / 4;
-    _clocks_cycles[2] = (CPU_FREQ / 65536) / 4;
-    _clocks_cycles[3] = (CPU_FREQ / 16384) / 4;
+    _clocks_cycles[0] = CPU_FREQ / 4096;
+    _clocks_cycles[1] = CPU_FREQ / 262144;
+    _clocks_cycles[2] = CPU_FREQ / 65536;
+    _clocks_cycles[3] = CPU_FREQ / 16384;
 }
 
 /**

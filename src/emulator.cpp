@@ -33,6 +33,7 @@ auto Emulator::init() -> void
     _lcd->init(_ram);
     _timer->init(_ram);
     _ram.load_ram(_config.mRomFile);
+    _lcd->set_scale(_config._screen_scale);
 }
 
 /**
@@ -70,6 +71,10 @@ auto Emulator::loop() -> void
                 break;
             case SDL_EVENT_KEY_DOWN:
                 _controllers->setInput(event.key);
+                if (event.key.key == SDLK_F1)
+                    _cpu->save_state(_config.mRomFile);
+                if (event.key.key == SDLK_F2)
+                    _cpu->load_state(_config.mRomFile);
                 break;
             case SDL_EVENT_KEY_UP:
                 _controllers->setInput(event.key);
@@ -84,7 +89,6 @@ auto Emulator::loop() -> void
                 break;
             }
         }
-        _lcd->reset();
         while (cycles_count < frame_cycle_count)
         {
             //_cpu->debug(cycles_count);
@@ -99,8 +103,8 @@ auto Emulator::loop() -> void
         auto end_time = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
         SDL_DelayPrecise(1000.0 * (frame_duration - elapsed));
-        FILE *f = fopen("ram", "wb");
+        /*FILE *f = fopen("ram", "wb");
         fwrite(_ram.data(), 1, 65535, f);
-        fclose(f);
+        fclose(f);*/
     }
 }
