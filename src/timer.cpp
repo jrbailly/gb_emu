@@ -35,7 +35,7 @@ auto Timer::init(RamBus &ram) -> void
         }
     });
     ram.register_callback(Register::DIV,
-                          [this](RamBus &ram, int addr, unsigned char val) { ram.write(Register::DIV, 0, false); });
+                          [this](RamBus &ram, int addr, unsigned char val) { ram.write_register(Register::DIV, 0); });
 }
 
 /**
@@ -53,23 +53,24 @@ auto Timer::step(RamBus &ram, int cycles_count) -> void
     {
         unsigned char div = ram[Register::DIV] + 1;
 
-        ram.write(Register::DIV, div, false);
+        ram.write_register(Register::DIV, div);
         _next_cycle_div += cycles_per_div_increment;
     }
     if (_next_cycle_tima <= 0 && _cycle_tima > 0)
     {
         unsigned char tima = ram[Register::TIMA];
-        unsigned char tma = ram[Register::TMA];
 
         if (tima == 0xFF)
         {
             uint8_t interrupt = ram[CPU::Register::IF];
+            unsigned char tma = ram[Register::TMA];
+
             tima = tma;
-            ram.write(CPU::Register::IF, interrupt | 0x4);
+            ram.write_register(CPU::Register::IF, interrupt | 0x4);
         }
         else
             tima++;
-        ram.write(Register::TIMA, tima);
+        ram.write_register(Register::TIMA, tima);
         _next_cycle_tima += _cycle_tima;
     }
 }

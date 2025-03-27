@@ -10,11 +10,11 @@ auto Controllers::init(RamBus &ram) -> void
         uint8_t value = val & 0x30;
 
         if (value & 0x20 && mDpads != 0xF)
-            ram.write(Register::JOYP, 0x20 | mDpads, false);
+            ram.write_register(Register::JOYP, 0x20 | mDpads);
         else if (value & 0x10 && mButtons != 0xF)
-            ram.write(Register::JOYP, 0x10 | mButtons, false);
+            ram.write_register(Register::JOYP, 0x10 | mButtons);
         else
-            ram.write(Register::JOYP, 0x3F, false);
+            ram.write_register(Register::JOYP, 0x3F);
     });
 }
 

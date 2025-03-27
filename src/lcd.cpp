@@ -125,11 +125,11 @@ auto LCD::step(int cycles_count) -> void
         unsigned char ly = (_ram[Register::LY] + 1) % max_lines;
 
         interrupt = _ram[CPU::Register::IF];
-        _ram.write(Register::LY, ly);
+        _ram.write_register(Register::LY, ly);
         _next_line_cycle += cycles_per_line;
         // vblank
         if (ly == 144)
-            _ram.write(CPU::Register::IF, interrupt | 0x1);
+            _ram.write_register(CPU::Register::IF, interrupt | 0x1);
         update_stat();
         scanline();
     }
@@ -218,8 +218,8 @@ auto LCD::update_stat() -> void
         interrupt |= 0x2;
     if ((stat & LYC_INT) && (ly == lyc))
         interrupt |= 0x2;
-    _ram.write(CPU::Register::IF, interrupt);
-    _ram.write(Register::STAT, stat);
+    _ram.write_register(CPU::Register::IF, interrupt);
+    _ram.write_register(Register::STAT, stat);
 }
 
 /**

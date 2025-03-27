@@ -51,39 +51,38 @@ class APU
         WAVE_RAM = 0xFF30,
     };
     APU(RamBus &ram);
-    void init(RamBus &ram);
-    void step(uint32_t cycles_count);
-    void flush();
-    void callback(int additional_amount, int total_amount);
+    auto init(RamBus &ram) -> void;
+    auto step(uint32_t cycles_count) -> void;
+    auto flush() -> void;
 
   private:
-    void init_sdl();
-    void fillTables();
-    void process_ch1();
-    void process_ch2();
-    void process_ch3();
-    void process_ch4();
-    void trigger_ch1();
-    void trigger_ch2();
-    void trigger_ch3();
-    void trigger_ch4();
-    void update_timer();
-    void mixer();
+    auto init_sdl() -> void;
+    auto fillTables() -> void;
+    auto process_ch1() -> void;
+    auto process_ch2() -> void;
+    auto process_ch3() -> void;
+    auto process_ch4() -> void;
+    auto trigger_ch1() -> void;
+    auto trigger_ch2() -> void;
+    auto trigger_ch3() -> void;
+    auto trigger_ch4() -> void;
+    auto update_timer() -> void;
+    auto mixer() -> void;
 
   private:
-    RamBus &mRAM;
-    int mTotalCycle;
-    int mNextCycle;
-    int mSweepCycle;
-    int mTimerCycle;
-    int mBufferIndex;
-    float mDutyCycles[DUTY_CYCLES];
-    int mStepRise[FREQUENCIES][DUTY_CYCLES];
-    int mStepMax[FREQUENCIES][DUTY_CYCLES];
-    uint16_t lfsr;
-    SDL_AudioStream *mAudioStream;
-    Channel mChannels[4];
-    std::array<int16_t, AUDIO_BUFFER_SIZE * CHANNELS> mBuffer;
+    RamBus &_ram;
+    int _total_cycle;
+    int _next_cycle;
+    int _sweep_cycle;
+    int _timer_cycle;
+    int _buffer_index;
+    float _duty_cycles[DUTY_CYCLES];
+    int _step_rise[FREQUENCIES][DUTY_CYCLES];
+    int _step_max[FREQUENCIES][DUTY_CYCLES];
+    uint16_t _lfsr;
+    SDL_AudioStream *_audio_stream;
+    Channel _channels[4];
+    std::array<int16_t, AUDIO_BUFFER_SIZE * CHANNELS> _buffer;
 };
 
 #endif

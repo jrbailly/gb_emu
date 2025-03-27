@@ -28,14 +28,10 @@ class RamBus
             _ram[address] = value;
         if (_write_callbacks[address] && callback)
             _write_callbacks[address](*this, address, value);
-        if (address == 0xFF02)
-        {
-            if ((value & 0x80) == 0x80)
-            {
-                std::cout << _ram[0xFF01];
-                _ram[0xFF01] &= 0xEF;
-            }
-        }
+    }
+    inline auto write_register(int address, unsigned char value) -> void
+    {
+        _ram[address] = value;
     }
     auto write_range(const unsigned char *datas, int size, int address) -> void;
     auto load_ram(const std::string &romfile) -> void;
