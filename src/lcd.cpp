@@ -6,7 +6,9 @@
 /**
  * @brief Construct a new LCD object
  *
- * @param ram
+ * Initializes the LCD with a reference to the RamBus and sets default values for colors, scale, and pointers.
+ *
+ * @param ram Reference to the RamBus object used for memory access
  */
 LCD::LCD(RamBus &ram) : _ram(ram), _scale(1)
 {
@@ -22,19 +24,28 @@ LCD::LCD(RamBus &ram) : _ram(ram), _scale(1)
     _BGP0[3] = _colors[GrayLevel::BLACK];
     _window = nullptr;
     _renderer = nullptr;
-    _surface_sprites = nullptr;
     _texture_sprites = nullptr;
-    _surface_background = nullptr;
     _texture_background = nullptr;
     _reload_surface = true;
 }
 
+/**
+ * @brief Destroy the LCD object
+ *
+ * Cleans up by destroying the window and associated resources.
+ */
 LCD::~LCD()
 {
     destroy_window();
 }
 
-void LCD::create_window()
+/**
+ * @brief Create a new window for the LCD
+ *
+ * Sets up an SDL window, renderer, and textures for sprites and background rendering.
+ * Throws an exception if any SDL operation fails.
+ */
+auto LCD::create_window() -> void
 {
     destroy_window();
     _window = SDL_CreateWindow("", _scale * screen_width, _scale * screen_height, 0);
@@ -43,46 +54,68 @@ void LCD::create_window()
     _renderer = SDL_CreateRenderer(_window, NULL);
     if (!_renderer)
         throw std::runtime_error(std::string("SDL_CreateRenderer : ") + SDL_GetError());
-    _surface_sprites = SDL_CreateSurface(line_width, 2 * tiles_height, SDL_PIXELFORMAT_RGBA8888);
-    if (!_surface_sprites)
-        throw std::runtime_error(std::string("SDL_CreateSurface : ") + SDL_GetError());
-    _surface_background = SDL_CreateSurface(line_width, tiles_height, SDL_PIXELFORMAT_RGBA8888);
-    if (!_surface_background)
-        throw std::runtime_error(std::string("SDL_CreateSurface : ") + SDL_GetError());
+    _texture_sprites = SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, line_width,
+                                         2 * tiles_height);
+    if (!_texture_sprites)
+        throw std::runtime_error(std::string("SDL_CreateTexture : ") + SDL_GetError());
+    _texture_background =
+        SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, line_width, tiles_height);
+    if (!_texture_background)
+        throw std::runtime_error(std::string("SDL_CreateTexture : ") + SDL_GetError());
     if (!SDL_SetRenderDrawColor(_renderer, 255, 255, 255, 255))
         throw std::runtime_error(std::string("SDL_SetRenderDrawColor : ") + SDL_GetError());
+    if (!SDL_SetTextureScaleMode(_texture_sprites, SDL_SCALEMODE_NEAREST))
+        throw std::runtime_error(std::string("SDL_SetTextureScaleMode : ") + SDL_GetError());
+    if (!SDL_SetTextureScaleMode(_texture_background, SDL_SCALEMODE_NEAREST))
+        throw std::runtime_error(std::string("SDL_SetTextureScaleMode : ") + SDL_GetError());
 }
 
-void LCD::destroy_window()
+/**
+ * @brief Destroy the window and associated resources
+ *
+ * Frees the SDL window, renderer, and texture resources if they exist.
+ */
+auto LCD::destroy_window() -> void
 {
     if (_window)
         SDL_DestroyWindow(_window);
     if (_renderer)
         SDL_DestroyRenderer(_renderer);
-    if (_surface_sprites)
-        SDL_DestroySurface(_surface_sprites);
-    if (_surface_background)
-        SDL_DestroySurface(_surface_background);
+    if (_texture_sprites)
+        SDL_DestroyTexture(_texture_sprites);
+    if (_texture_background)
+        SDL_DestroyTexture(_texture_background);
 }
 
-void LCD::init(RamBus &ram)
+/**
+ * @brief Initialize the LCD with the given RamBus
+ *
+ * Registers callbacks for palette and tile updates and creates the display window.
+ *
+ * @param ram Reference to the RamBus object for memory operations
+ */
+auto LCD::init(RamBus &ram) -> void
 {
     ram.register_callback(Register::BGP, [this](RamBus &ram, int addr, unsigned char val) { this->update_BGP0(); });
     ram.register_callback(Register::OBP0, [this](RamBus &ram, int addr, unsigned char val) { this->update_OBP0(); });
     ram.register_callback(Register::OBP1, [this](RamBus &ram, int addr, unsigned char val) { this->update_BGP1(); });
     ram.register_callback(Register::DMA, [this](RamBus &ram, int addr, unsigned char val) {
         int start_address = val << 8;
-        int end_address = start_address + oam_size;
-        int dst_address = Register::OAM;
-        for (int i = 0; i < oam_size; ++i)
-            ram.write(dst_address + i, ram[start_address + i]);
+        ram.write_range(ram.data() + start_address, oam_size, Register::OAM);
     });
     ram.register_callback_range(TilesAddress::BLOCK0, tiles_memory_size,
                                 [this](RamBus &ram, int addr, unsigned char val) { _reload_surface = true; });
     create_window();
 }
 
-void LCD::step(int cycles_count)
+/**
+ * @brief Advance the LCD simulation by a given number of cycles
+ *
+ * Updates the LCD state, triggers scanlines, and handles VBlank interrupts.
+ *
+ * @param cycles_count Number of cycles to advance the simulation
+ */
+auto LCD::step(int cycles_count) -> void
 {
     unsigned char interrupt;
 
@@ -102,26 +135,14 @@ void LCD::step(int cycles_count)
     }
 }
 
-void LCD::renderer()
+/**
+ * @brief Render the current frame if LCD is enabled
+ *
+ * Updates the display by scaling, presenting, and clearing the renderer.
+ * Throws an exception if SDL operations fail.
+ */
+auto LCD::renderer() -> void
 {
-    if (_reload_surface)
-    {
-        load_surface_background();
-        load_surface_sprites();
-        if (_texture_sprites)
-            SDL_DestroyTexture(_texture_sprites);
-        if (_texture_background)
-            SDL_DestroyTexture(_texture_background);
-        _texture_sprites = SDL_CreateTextureFromSurface(_renderer, _surface_sprites);
-        if (!_texture_sprites)
-            throw std::runtime_error(std::string("SDL_CreateTextureFromSurface : ") + SDL_GetError());
-        _texture_background = SDL_CreateTextureFromSurface(_renderer, _surface_background);
-        if (!_texture_background)
-            throw std::runtime_error(std::string("SDL_CreateTextureFromSurface : ") + SDL_GetError());
-        SDL_SetTextureScaleMode(_texture_sprites, SDL_SCALEMODE_NEAREST);
-        SDL_SetTextureScaleMode(_texture_background, SDL_SCALEMODE_NEAREST);
-        _reload_surface = false;
-    }
     if (_ram[Register::LCDC] & LCD_ENABLE)
     {
         if (!SDL_SetRenderScale(_renderer, _scale, _scale))
@@ -133,17 +154,35 @@ void LCD::renderer()
     }
 }
 
-void LCD::set_scale(int scale)
+/**
+ * @brief Set the scale of the LCD window
+ *
+ * Updates the display scale and recreates the window accordingly.
+ *
+ * @param scale The new scale factor for the window
+ */
+auto LCD::set_scale(int scale) -> void
 {
     _scale = scale;
     destroy_window();
     create_window();
 }
 
-void LCD::scanline()
+/**
+ * @brief Process a single scanline
+ *
+ * Handles rendering of sprites, window, and background for the current scanline if LCD is enabled.
+ */
+auto LCD::scanline() -> void
 {
     bool display_window_line = false;
 
+    if (_reload_surface)
+    {
+        load_surface_background();
+        load_surface_sprites();
+        _reload_surface = false;
+    }
     if (_ram[Register::LCDC] & LCD_ENABLE)
     {
         if (_ram[Register::LCDC] & OBJ_ENABLE)
@@ -157,7 +196,12 @@ void LCD::scanline()
     }
 }
 
-void LCD::update_stat()
+/**
+ * @brief Update the STAT register and handle interrupts
+ *
+ * Updates the STAT register based on the current line and triggers interrupts as needed.
+ */
+auto LCD::update_stat() -> void
 {
     unsigned char stat = _ram[Register::STAT] & 0xF8;
     unsigned char ly = _ram[Register::LY];
@@ -178,7 +222,12 @@ void LCD::update_stat()
     _ram.write(Register::STAT, stat);
 }
 
-void LCD::update_BGP0()
+/**
+ * @brief Update the BGP0 palette
+ *
+ * Refreshes the background palette (BGP0) based on the current BGP register value.
+ */
+auto LCD::update_BGP0() -> void
 {
     unsigned char palette = _ram[Register::BGP];
 
@@ -187,7 +236,12 @@ void LCD::update_BGP0()
     _reload_surface = true;
 }
 
-void LCD::update_OBP0()
+/**
+ * @brief Update the OBP0 palette
+ *
+ * Refreshes the first object palette (OBP0) based on the current OBP0 register value.
+ */
+auto LCD::update_OBP0() -> void
 {
     unsigned char palette = _ram[Register::OBP0];
     unsigned char color;
@@ -204,7 +258,12 @@ void LCD::update_OBP0()
     _reload_surface = true;
 }
 
-void LCD::update_BGP1()
+/**
+ * @brief Update the BGP1 palette
+ *
+ * Refreshes the second object palette (OBP1) based on the current OBP1 register value.
+ */
+auto LCD::update_BGP1() -> void
 {
     unsigned char palette = _ram[Register::OBP1];
     unsigned char color;
@@ -221,12 +280,21 @@ void LCD::update_BGP1()
     _reload_surface = true;
 }
 
-void LCD::load_surface_sprites()
+/**
+ * @brief Load the sprite surface into the texture
+ *
+ * Updates the sprite texture with data from the tile memory using OBP0 and OBP1 palettes.
+ */
+auto LCD::load_surface_sprites() -> void
 {
-    uint32_t *datas = static_cast<uint32_t *>(_surface_sprites->pixels);
+    uint32_t *datas;
     int address = TilesAddress::BLOCK0;
+    int pitch;
     unsigned char value;
+    SDL_Rect rect{0, 0, line_width, 2 * tiles_height};
 
+    if (!SDL_LockTexture(_texture_sprites, &rect, (void **)&(datas), &pitch))
+        throw std::runtime_error(std::string("SDL_LockTexture : ") + SDL_GetError());
     for (int i = 0; i < 256; ++i)
     {
         for (int j = 0; j < tiles_height; ++j)
@@ -240,13 +308,24 @@ void LCD::load_surface_sprites()
             address += 2;
         }
     }
+    SDL_UnlockTexture(_texture_sprites);
 }
 
-void LCD::load_surface_background()
+/**
+ * @brief Load the background surface into the texture
+ *
+ * Updates the background texture with data from the tile memory using the BGP0 palette.
+ */
+auto LCD::load_surface_background() -> void
 {
-    uint32_t *datas = static_cast<uint32_t *>(_surface_background->pixels);
+    uint32_t *datas;
     int address = TilesAddress::BLOCK0;
+    int pitch;
     unsigned char value;
+    SDL_Rect rect{0, 0, line_width, tiles_height};
+
+    if (!SDL_LockTexture(_texture_background, &rect, (void **)&(datas), &pitch))
+        throw std::runtime_error(std::string("SDL_LockTexture : ") + SDL_GetError());
 
     for (int i = 0; i < 384; ++i)
     {
@@ -260,9 +339,17 @@ void LCD::load_surface_background()
             address += 2;
         }
     }
+    SDL_UnlockTexture(_texture_background);
 }
 
-void LCD::draw_sprites(bool priority)
+/**
+ * @brief Draw sprites with the given priority
+ *
+ * Renders sprites on the current scanline based on priority and attributes like flipping.
+ *
+ * @param priority Whether to draw sprites with priority over the background
+ */
+auto LCD::draw_sprites(bool priority) -> void
 {
     int address = Register::OAM;
     int attribute;
@@ -298,7 +385,13 @@ void LCD::draw_sprites(bool priority)
                     angle = 0;
                 }
                 if (attribute & Y_FLIP)
-                    src.y = height - 1 - src.y;
+                {
+                    if (line - y < tiles_height)
+                        value++;
+                    else
+                        value--;
+                    src.y = tiles_height - 1 - src.y;
+                }
                 if (attribute & PALETTE)
                     src.y += tiles_height;
                 src.x = (value * tiles_width);
@@ -307,14 +400,20 @@ void LCD::draw_sprites(bool priority)
                 dst.y = line;
                 dst.w = tiles_width;
                 dst.h = 1;
-                SDL_RenderTextureRotated(_renderer, _texture_sprites, &src, &dst, angle, nullptr, flip);
+                if (!SDL_RenderTextureRotated(_renderer, _texture_sprites, &src, &dst, angle, nullptr, flip))
+                    throw std::runtime_error(std::string("SDL_RenderTextureRotated : ") + SDL_GetError());
             }
         }
         address += 4;
     }
 }
 
-void LCD::draw_background_line()
+/**
+ * @brief Draw a single line of the background
+ *
+ * Renders the background for the current scanline with scrolling offsets.
+ */
+auto LCD::draw_background_line() -> void
 {
     int address = BackgroundAddress::AREA0;
     int line = _ram[LY];
@@ -341,11 +440,19 @@ void LCD::draw_background_line()
         dst.y = line;
         dst.w = tiles_width;
         dst.h = 1;
-        SDL_RenderTexture(_renderer, _texture_background, &src, &dst);
+        if (!SDL_RenderTexture(_renderer, _texture_background, &src, &dst))
+            throw std::runtime_error(std::string("SDL_RenderTexture : ") + SDL_GetError());
         x = (x + tiles_width) % tile_maps_width;
     }
 }
 
+/**
+ * @brief Draw a single line of the window
+ *
+ * Renders the window for the current scanline if visible.
+ *
+ * @return true if the window line was drawn, false otherwise
+ */
 auto LCD::draw_window_line() -> bool
 {
     int address = BackgroundAddress::AREA0;
@@ -362,25 +469,23 @@ auto LCD::draw_window_line() -> bool
     address += ((y / tiles_width) * 32);
     if (y >= 0)
     {
-        for (int dst_x = 0; dst_x < 21; ++dst_x)
+        for (int dst_x = _ram[WX] / tiles_width; dst_x < 21; ++dst_x)
         {
-            if (dst_x * tiles_width >= _ram[WX])
-            {
-                value = _ram[address + (x / 8)];
-                if (value < 128 && (_ram[Register::LCDC] & BG_DATA_AREA) == 0)
-                    value += 256;
-                src.x = (value * tiles_width);
-                src.y = line % tiles_height;
-                src.w = tiles_width;
-                src.h = 1;
-                dst.x = (dst_x * tiles_width) - 7;
-                dst.y = line;
-                dst.w = tiles_width;
-                dst.h = 1;
-                SDL_RenderTexture(_renderer, _texture_background, &src, &dst);
-                x = (x + tiles_width) % tile_maps_width;
-                show_tile = true;
-            }
+            value = _ram[address + (x / 8)];
+            if (value < 128 && (_ram[Register::LCDC] & BG_DATA_AREA) == 0)
+                value += 256;
+            src.x = (value * tiles_width);
+            src.y = line % tiles_height;
+            src.w = tiles_width;
+            src.h = 1;
+            dst.x = (dst_x * tiles_width);
+            dst.y = line;
+            dst.w = tiles_width;
+            dst.h = 1;
+            if (!SDL_RenderTexture(_renderer, _texture_background, &src, &dst))
+                throw std::runtime_error(std::string("SDL_RenderTexture : ") + SDL_GetError());
+            x = (x + tiles_width) % tile_maps_width;
+            show_tile = true;
         }
     }
     return (show_tile);

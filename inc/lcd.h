@@ -85,24 +85,24 @@ class LCD
     };
     LCD(RamBus &ram);
     virtual ~LCD();
-    void init(RamBus &ram);
-    void step(int cycles_count);
-    void renderer();
-    void set_scale(int scale);
+    auto init(RamBus &ram) -> void;
+    auto step(int cycles_count) -> void;
+    auto renderer() -> void;
+    auto set_scale(int scale) -> void;
 
   private:
-    void create_window();
-    void destroy_window();
-    void scanline();
-    void update_stat();
-    void update_BGP0();
-    void update_OBP0();
-    void update_BGP1();
-    void load_surface_sprites();
-    void load_surface_background();
-    void draw_sprites(bool priority);
-    void draw_background_line();
-    bool draw_window_line();
+    auto create_window() -> void;
+    auto destroy_window() -> void;
+    auto scanline() -> void;
+    auto update_stat() -> void;
+    auto update_BGP0() -> void;
+    auto update_OBP0() -> void;
+    auto update_BGP1() -> void;
+    auto load_surface_sprites() -> void;
+    auto load_surface_background() -> void;
+    auto draw_sprites(bool priority) -> void;
+    auto draw_background_line() -> void;
+    auto draw_window_line() -> bool;
 
   private:
     RamBus &_ram;
@@ -110,9 +110,7 @@ class LCD
     int _next_line_cycle;
     SDL_Window *_window;
     SDL_Renderer *_renderer;
-    SDL_Surface *_surface_sprites;
     SDL_Texture *_texture_sprites;
-    SDL_Surface *_surface_background;
     SDL_Texture *_texture_background;
     unsigned int _BGP0[4];
     unsigned int _OBP0[4];
