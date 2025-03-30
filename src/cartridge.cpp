@@ -1,8 +1,8 @@
 #include "cartridge.h"
 #include "ram.h"
+#include <format>
 #include <fstream>
 #include <stdexcept>
-
 /**
  * @brief Construct a new Cartridge object
  *
@@ -20,7 +20,7 @@ auto Cartridge::init(RamBus &ram) -> void
 {
     ram.register_callback_range(0x2000, 0x4000, [this](RamBus &ram, int addr, unsigned char val) {
         if (_upper_bank + val > _rom.size())
-            throw std::runtime_error(std::string("Cartridge::init invalid bank : ") +
+            throw std::runtime_error(std::format("Cartridge::init invalid bank : ") +
                                      std::to_string(_upper_bank + val));
         if (val == 0)
             val = 1;
@@ -44,7 +44,7 @@ auto Cartridge::read_rom(const std::string_view filename) -> void
     std::streamsize bytesRead;
 
     if (!input)
-        throw std::runtime_error(std::string("Failed to open ROM file: ") + filename.data());
+        throw std::runtime_error(std::format("Failed to open ROM file: ") + filename.data());
     do
     {
         std::array<unsigned char, BLOCK_SIZE> block;

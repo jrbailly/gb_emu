@@ -1,6 +1,8 @@
 #include "ram.h"
 #include "cartridge.h"
+#include <format>
 #include <fstream>
+
 /**
  * @brief Construct a new RamBus object and fill the memory with '0'.
  *
@@ -21,7 +23,7 @@ RamBus::RamBus()
 auto RamBus::write_range(const unsigned char *datas, int size, int address) -> void
 {
     if (address + size > Ram::ram_size)
-        throw std::runtime_error(std::string("RamBus::write_range invalid size : ") + std::to_string(size));
+        throw std::runtime_error(std::format("RamBus::write_range invalid size : ") + std::to_string(size));
     std::copy(datas, datas + size, _ram.begin() + address);
 }
 

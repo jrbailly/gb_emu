@@ -1,6 +1,7 @@
 #include "lcd.h"
 #include "ram.h"
 #include <cstdio>
+#include <format>
 #include <functional>
 
 /**
@@ -50,24 +51,24 @@ auto LCD::create_window() -> void
     destroy_window();
     _window = SDL_CreateWindow("", _scale * screen_width, _scale * screen_height, 0);
     if (!_window)
-        throw std::runtime_error(std::string("SDL_CreateWindow : ") + SDL_GetError());
+        throw std::runtime_error(std::format("SDL_CreateWindow : {}", SDL_GetError()));
     _renderer = SDL_CreateRenderer(_window, NULL);
     if (!_renderer)
-        throw std::runtime_error(std::string("SDL_CreateRenderer : ") + SDL_GetError());
+        throw std::runtime_error(std::format("SDL_CreateRenderer : {}", SDL_GetError()));
     _texture_sprites = SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, line_width,
                                          2 * tiles_height);
     if (!_texture_sprites)
-        throw std::runtime_error(std::string("SDL_CreateTexture : ") + SDL_GetError());
+        throw std::runtime_error(std::format("SDL_CreateTexture : {}", SDL_GetError()));
     _texture_background =
         SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, line_width, tiles_height);
     if (!_texture_background)
-        throw std::runtime_error(std::string("SDL_CreateTexture : ") + SDL_GetError());
+        throw std::runtime_error(std::format("SDL_CreateTexture : {}", SDL_GetError()));
     if (!SDL_SetRenderDrawColor(_renderer, 255, 255, 255, 255))
-        throw std::runtime_error(std::string("SDL_SetRenderDrawColor : ") + SDL_GetError());
+        throw std::runtime_error(std::format("SDL_SetRenderDrawColor : {}", SDL_GetError()));
     if (!SDL_SetTextureScaleMode(_texture_sprites, SDL_SCALEMODE_NEAREST))
-        throw std::runtime_error(std::string("SDL_SetTextureScaleMode : ") + SDL_GetError());
+        throw std::runtime_error(std::format("SDL_SetTextureScaleMode : {}", SDL_GetError()));
     if (!SDL_SetTextureScaleMode(_texture_background, SDL_SCALEMODE_NEAREST))
-        throw std::runtime_error(std::string("SDL_SetTextureScaleMode : ") + SDL_GetError());
+        throw std::runtime_error(std::format("SDL_SetTextureScaleMode : {}", SDL_GetError()));
 }
 
 /**
@@ -146,11 +147,11 @@ auto LCD::renderer() -> void
     if (_ram[Register::LCDC] & LCD_ENABLE)
     {
         if (!SDL_SetRenderScale(_renderer, _scale, _scale))
-            throw std::runtime_error(std::string("SDL_SetRenderScale : ") + SDL_GetError());
+            throw std::runtime_error(std::format("SDL_SetRenderScale : {}", SDL_GetError()));
         if (!SDL_RenderPresent(_renderer))
-            throw std::runtime_error(std::string("SDL_RenderPresent : ") + SDL_GetError());
+            throw std::runtime_error(std::format("SDL_RenderPresent : {}", SDL_GetError()));
         if (!SDL_RenderClear(_renderer))
-            throw std::runtime_error(std::string("SDL_RenderClear : ") + SDL_GetError());
+            throw std::runtime_error(std::format("SDL_RenderClear : {}", SDL_GetError()));
     }
 }
 
@@ -294,7 +295,7 @@ auto LCD::load_surface_sprites() -> void
     SDL_Rect rect{0, 0, line_width, 2 * tiles_height};
 
     if (!SDL_LockTexture(_texture_sprites, &rect, (void **)&(datas), &pitch))
-        throw std::runtime_error(std::string("SDL_LockTexture : ") + SDL_GetError());
+        throw std::runtime_error(std::format("SDL_LockTexture : {}", SDL_GetError()));
     for (int i = 0; i < 256; ++i)
     {
         for (int j = 0; j < tiles_height; ++j)
@@ -325,7 +326,7 @@ auto LCD::load_surface_background() -> void
     SDL_Rect rect{0, 0, line_width, tiles_height};
 
     if (!SDL_LockTexture(_texture_background, &rect, (void **)&(datas), &pitch))
-        throw std::runtime_error(std::string("SDL_LockTexture : ") + SDL_GetError());
+        throw std::runtime_error(std::format("SDL_LockTexture : {}", SDL_GetError()));
 
     for (int i = 0; i < 384; ++i)
     {
@@ -401,7 +402,7 @@ auto LCD::draw_sprites(bool priority) -> void
                 dst.w = tiles_width;
                 dst.h = 1;
                 if (!SDL_RenderTextureRotated(_renderer, _texture_sprites, &src, &dst, angle, nullptr, flip))
-                    throw std::runtime_error(std::string("SDL_RenderTextureRotated : ") + SDL_GetError());
+                    throw std::runtime_error(std::format("SDL_RenderTextureRotated : {}", SDL_GetError()));
             }
         }
         address += 4;
@@ -441,7 +442,7 @@ auto LCD::draw_background_line() -> void
         dst.w = tiles_width;
         dst.h = 1;
         if (!SDL_RenderTexture(_renderer, _texture_background, &src, &dst))
-            throw std::runtime_error(std::string("SDL_RenderTexture : ") + SDL_GetError());
+            throw std::runtime_error(std::format("SDL_RenderTexture : {}", SDL_GetError()));
         x = (x + tiles_width) % tile_maps_width;
     }
 }
@@ -483,7 +484,7 @@ auto LCD::draw_window_line() -> bool
             dst.w = tiles_width;
             dst.h = 1;
             if (!SDL_RenderTexture(_renderer, _texture_background, &src, &dst))
-                throw std::runtime_error(std::string("SDL_RenderTexture : ") + SDL_GetError());
+                throw std::runtime_error(std::format("SDL_RenderTexture : {}", SDL_GetError()));
             x = (x + tiles_width) % tile_maps_width;
             show_tile = true;
         }
