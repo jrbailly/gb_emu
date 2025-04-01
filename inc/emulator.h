@@ -19,6 +19,11 @@ class Emulator
     auto loop() -> void;
 
   private:
+    auto process_sdl_events() -> bool;
+    auto save_state() -> void;
+    auto load_state() -> void;
+
+  private:
     std::unique_ptr<APU> _apu;
     std::unique_ptr<Cartridge> _cartridge;
     std::unique_ptr<Controllers> _controllers;

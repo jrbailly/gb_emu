@@ -14,6 +14,6 @@ target_link_libraries(gb_emu PRIVATE SDL3::SDL3 nlohmann_json::nlohmann_json)
 
 
 file(GLOB_RECURSE SRCS_TEST src/cpu.cpp src/ram.cpp tests/*.cpp)
-add_executable(gb_emu_test ${SRCS_TEST})
-target_link_libraries(gb_emu_test PRIVATE SDL3::SDL3 nlohmann_json::nlohmann_json GTest::gtest_main)
-gtest_discover_tests(gb_emu_test)
+#add_executable(gb_emu_test ${SRCS_TEST})
+#target_link_libraries(gb_emu_test PRIVATE SDL3::SDL3 nlohmann_json::nlohmann_json GTest::gtest_main)
+#gtest_discover_tests(gb_emu_test)

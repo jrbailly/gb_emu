@@ -43,6 +43,10 @@ class RamBus
     {
         return _ram.data();
     }
+    const std::array<unsigned char, Ram::ram_size> getDatas() const
+    {
+        return _ram;
+    }
 
   private:
     bool _unittest;

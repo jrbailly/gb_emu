@@ -49,7 +49,6 @@ auto RamBus::load_ram(const std::string &rom_file) -> void
 
     if (input)
     {
-
         input.read(reinterpret_cast<char *>(block.data()), ROM_RAM_SIZE);
         bytesRead = input.gcount();
         if (bytesRead == ROM_RAM_SIZE)

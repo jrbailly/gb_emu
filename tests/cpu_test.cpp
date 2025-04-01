@@ -14,9 +14,7 @@ std::vector<std::string> GetJsonFiles(const std::string &directory)
     std::vector<std::string> files;
     for (const auto &entry : std::filesystem::directory_iterator(directory))
     {
-        if (entry.is_regular_file() && entry.path().extension() == ".json" &&
-            entry.path().filename().string().find("fb.json") == std::string::npos &&
-            entry.path().filename().string().find("d8.json") == std::string::npos)
+        if (entry.is_regular_file() && entry.path().extension() == ".json")
             files.push_back(entry.path().string());
     }
     return files;

@@ -97,7 +97,7 @@ class LCD
     auto update_stat() -> void;
     auto update_BGP0() -> void;
     auto update_OBP0() -> void;
-    auto update_BGP1() -> void;
+    auto update_OBP1() -> void;
     auto load_surface_sprites() -> void;
     auto load_surface_background() -> void;
     auto draw_sprites(bool priority) -> void;
@@ -117,6 +117,10 @@ class LCD
     unsigned int _OBP1[4];
     unsigned int _colors[5];
     bool _reload_surface;
+    bool _reload_sprite;
+    bool _reload_background;
+    std::array<int, max_tiles> _background_change;
+    std::array<int, max_tiles> _sprite_change;
 };
 
 #endif

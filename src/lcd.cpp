@@ -28,6 +28,10 @@ LCD::LCD(RamBus &ram) : _ram(ram), _scale(1)
     _texture_sprites = nullptr;
     _texture_background = nullptr;
     _reload_surface = true;
+    _reload_sprite = true;
+    _reload_background = true;
+    _background_change.fill(0);
+    _sprite_change.fill(0);
 }
 
 /**
@@ -99,13 +103,18 @@ auto LCD::init(RamBus &ram) -> void
 {
     ram.register_callback(Register::BGP, [this](RamBus &ram, int addr, unsigned char val) { this->update_BGP0(); });
     ram.register_callback(Register::OBP0, [this](RamBus &ram, int addr, unsigned char val) { this->update_OBP0(); });
-    ram.register_callback(Register::OBP1, [this](RamBus &ram, int addr, unsigned char val) { this->update_BGP1(); });
+    ram.register_callback(Register::OBP1, [this](RamBus &ram, int addr, unsigned char val) { this->update_OBP1(); });
     ram.register_callback(Register::DMA, [this](RamBus &ram, int addr, unsigned char val) {
         int start_address = val << 8;
         ram.write_range(ram.data() + start_address, oam_size, Register::OAM);
     });
     ram.register_callback_range(TilesAddress::BLOCK0, tiles_memory_size,
-                                [this](RamBus &ram, int addr, unsigned char val) { _reload_surface = true; });
+                                [this](RamBus &ram, int addr, unsigned char val) {
+                                    int index = (addr - TilesAddress::BLOCK0) / (2 * tiles_width);
+                                    _background_change[index] = 1;
+                                    _sprite_change[index] = 1;
+                                    _reload_surface = true;
+                                });
     create_window();
 }
 
@@ -183,6 +192,8 @@ auto LCD::scanline() -> void
         load_surface_background();
         load_surface_sprites();
         _reload_surface = false;
+        _reload_sprite = false;
+        _reload_background = false;
     }
     if (_ram[Register::LCDC] & LCD_ENABLE)
     {
@@ -235,6 +246,7 @@ auto LCD::update_BGP0() -> void
     for (int i = 0; i < 8; i += 2)
         _BGP0[i / 2] = _colors[(palette >> i) & 0x3];
     _reload_surface = true;
+    _reload_background = true;
 }
 
 /**
@@ -257,6 +269,7 @@ auto LCD::update_OBP0() -> void
     }
     _OBP0[0] = _colors[GrayLevel::TRANSPARENT];
     _reload_surface = true;
+    _reload_sprite = true;
 }
 
 /**
@@ -264,7 +277,7 @@ auto LCD::update_OBP0() -> void
  *
  * Refreshes the second object palette (OBP1) based on the current OBP1 register value.
  */
-auto LCD::update_BGP1() -> void
+auto LCD::update_OBP1() -> void
 {
     unsigned char palette = _ram[Register::OBP1];
     unsigned char color;
@@ -279,6 +292,7 @@ auto LCD::update_BGP1() -> void
     }
     _OBP1[0] = _colors[GrayLevel::TRANSPARENT];
     _reload_surface = true;
+    _reload_sprite = true;
 }
 
 /**
@@ -298,16 +312,20 @@ auto LCD::load_surface_sprites() -> void
         throw std::runtime_error(std::format("SDL_LockTexture : {}", SDL_GetError()));
     for (int i = 0; i < 256; ++i)
     {
-        for (int j = 0; j < tiles_height; ++j)
+        if (_sprite_change[i] != 0 || _reload_sprite)
         {
-            for (int k = 0; k < 8; k++)
+            for (int j = 0; j < tiles_height; ++j)
             {
-                value = ((_ram[address] >> (7 - k)) & 1) | (((_ram[address + 1] >> (7 - k)) & 1) << 1);
-                datas[(j * line_width) + (i * tiles_width) + k] = _OBP0[value];
-                datas[((j + tiles_height) * line_width) + (i * tiles_width) + k] = _OBP1[value];
+                for (int k = 0; k < 8; k++)
+                {
+                    value = ((_ram[address] >> (7 - k)) & 1) | (((_ram[address + 1] >> (7 - k)) & 1) << 1);
+                    datas[(j * line_width) + (i * tiles_width) + k] = _OBP0[value];
+                    datas[((j + tiles_height) * line_width) + (i * tiles_width) + k] = _OBP1[value];
+                }
+                address += 2;
             }
-            address += 2;
         }
+        _sprite_change[i] = 0;
     }
     SDL_UnlockTexture(_texture_sprites);
 }
@@ -319,25 +337,27 @@ auto LCD::load_surface_sprites() -> void
  */
 auto LCD::load_surface_background() -> void
 {
-    uint32_t *datas;
+    uint32_t *datas = nullptr;
     int address = TilesAddress::BLOCK0;
-    int pitch;
+    int pitch = 0;
     unsigned char value;
     SDL_Rect rect{0, 0, line_width, tiles_height};
 
     if (!SDL_LockTexture(_texture_background, &rect, (void **)&(datas), &pitch))
         throw std::runtime_error(std::format("SDL_LockTexture : {}", SDL_GetError()));
-
     for (int i = 0; i < 384; ++i)
     {
-        for (int line = 0; line < tiles_height; ++line)
+        if (_background_change[i] != 0 || _reload_background)
         {
-            for (int k = 0; k < 8; k++)
+            for (int line = 0; line < tiles_height; ++line)
             {
-                value = ((_ram[address] >> (7 - k)) & 1) | (((_ram[address + 1] >> (7 - k)) & 1) << 1);
-                datas[(line * line_width) + (i * tiles_width) + k] = _BGP0[value];
+                for (int k = 0; k < 8; k++)
+                {
+                    value = ((_ram[address] >> (7 - k)) & 1) | (((_ram[address + 1] >> (7 - k)) & 1) << 1);
+                    datas[(line * line_width) + (i * tiles_width) + k] = _BGP0[value];
+                }
+                address += 2;
             }
-            address += 2;
         }
     }
     SDL_UnlockTexture(_texture_background);

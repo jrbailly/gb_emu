@@ -41,138 +41,143 @@ constexpr std::array<uint16_t, 2048> intToBcd = [] {
     return arr;
 }();
 
-CPU::CPU(RamBus &ram) : mRAM(ram)
+/**
+ * @brief Constructs a CPU object with a reference to the RAM bus.
+ * @param ram Reference to the RAM bus.
+ */
+CPU::CPU(RamBus &ram) : _ram(ram)
 {
-    mRegister.ime = 0;
-    mRegister.pc = 0x100;
-    mRegister.sp = 0xfffe;
-    mMapReg = {Reg8::B, Reg8::C, Reg8::D, Reg8::E, Reg8::H, Reg8::L, Reg8::F, Reg8::A};
-    mRegister.regs8[Reg8::A] = 0x01;
-    mRegister.regs8[Reg8::F] = 0x00;
-    mRegister.regs8[Reg8::B] = 0x00;
-    mRegister.regs8[Reg8::C] = 0x13;
-    mRegister.regs8[Reg8::D] = 0;
-    mRegister.regs8[Reg8::E] = 0xd8;
-    mRegister.regs8[Reg8::H] = 0x01;
-    mRegister.regs8[Reg8::L] = 0x4d;
-    mRegisterIndex = {{"b", Reg8::B}, {"c", Reg8::C}, {"d", Reg8::D}, {"e", Reg8::E},
-                      {"h", Reg8::H}, {"l", Reg8::L}, {"f", Reg8::F}, {"a", Reg8::A}};
+    _registers.halt = 0;
+    _registers.ime = 0;
+    _registers.pc = 0x100;
+    _registers.sp = 0xfffe;
+    _registers.regs8[Reg8::A] = 0x01;
+    _registers.regs8[Reg8::F] = 0xB0;
+    _registers.regs8[Reg8::B] = 0x00;
+    _registers.regs8[Reg8::C] = 0x13;
+    _registers.regs8[Reg8::D] = 0;
+    _registers.regs8[Reg8::E] = 0xd8;
+    _registers.regs8[Reg8::H] = 0x01;
+    _registers.regs8[Reg8::L] = 0x4d;
+    _register_index = {{"b", Reg8::B}, {"c", Reg8::C}, {"d", Reg8::D}, {"e", Reg8::E},
+                       {"h", Reg8::H}, {"l", Reg8::L}, {"f", Reg8::F}, {"a", Reg8::A}};
+    _map_reg = {Reg8::B, Reg8::C, Reg8::D, Reg8::E, Reg8::H, Reg8::L, Reg8::F, Reg8::A};
 }
 
+/**
+ * @brief Outputs debug information about the CPU state.
+ * @param cycles Number of executed cycles.
+ */
 void CPU::debug(uint32_t cycles)
 {
     // #ifdef A
     FILE *f = /*stdout; */ fopen("log", "a+");
-    fprintf(f, "A:%2X F:", mRegister.regs8[Reg8::A]);
-    if (mRegister.regs8[Reg8::F] & 0x80)
+    fprintf(f, "A:%2X F:", _registers.regs8[Reg8::A]);
+    if (_registers.regs8[Reg8::F] & 0x80)
         fprintf(f, "Z");
     else
         fprintf(f, "-");
-    if (mRegister.regs8[Reg8::F] & 0x40)
+    if (_registers.regs8[Reg8::F] & 0x40)
         fprintf(f, "N");
     else
         fprintf(f, "-");
-    if (mRegister.regs8[Reg8::F] & 0x20)
+    if (_registers.regs8[Reg8::F] & 0x20)
         fprintf(f, "H");
     else
         fprintf(f, "-");
-    if (mRegister.regs8[Reg8::F] & 0x10)
+    if (_registers.regs8[Reg8::F] & 0x10)
         fprintf(f, "C");
     else
         fprintf(f, "-");
-    fprintf(f, " BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x  IF:%02X (cy: %d)\n", mRegister.regs16[Reg16::BC],
-            mRegister.regs16[Reg16::DE], mRegister.regs16[Reg16::HL], mRegister.sp, mRegister.pc, mRAM[IF], cycles);
+    fprintf(f, " BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x  IF:%02X (cy: %d)\n", _registers.regs16[Reg16::BC],
+            _registers.regs16[Reg16::DE], _registers.regs16[Reg16::HL], _registers.sp, _registers.pc, _ram[IF], cycles);
     fclose(f);
     // #endif
 }
 
+/**
+ * @brief Executes one CPU instruction and returns the number of cycles taken.
+ * @return The number of cycles taken by the instruction.
+ */
 uint8_t CPU::step()
 {
-    int8_t cycles_count = 0;
+    int8_t cycles_count = 1;
+    uint8_t interrupts;
 
-    if (mRegister.ime == 1)
+    if (_registers.halt)
     {
-        uint8_t activeInterrupt = mRAM[Register::IE] & mRAM[Register::IF];
-
-        if (activeInterrupt & 0x1)
-            cycles_count = active_interrupt(0x40);
-        else if (activeInterrupt & 0x2)
-            cycles_count = active_interrupt(0x48);
-        else if (activeInterrupt & 0x4)
-            cycles_count = active_interrupt(0x50);
-        else if (activeInterrupt & 0x10)
-            cycles_count = active_interrupt(0x58);
-        else if (activeInterrupt & 0x20)
-            cycles_count = active_interrupt(0x60);
+        interrupts = _ram[Register::IF];
+        if (interrupts)
+            _registers.halt = false;
     }
-    cycles_count += decode();
+    if (_registers.ime == 1)
+    {
+        interrupts = _ram[Register::IE] & _ram[Register::IF];
+        if (interrupts & 0x1)
+            cycles_count = active_interrupt(0x1, InterruptAddress::VBLANK);
+        else if (interrupts & 0x2)
+            cycles_count = active_interrupt(0x2, InterruptAddress::STAT);
+        else if (interrupts & 0x4)
+            cycles_count = active_interrupt(0x4, InterruptAddress::TIMER);
+        else if (interrupts & 0x10)
+            cycles_count = active_interrupt(0x10, InterruptAddress::SERIAL);
+        else if (interrupts & 0x20)
+            cycles_count = active_interrupt(0x20, InterruptAddress::JOYPAD);
+    }
+    if (!_registers.halt)
+        cycles_count += decode();
     return (cycles_count);
 }
 
-void CPU::save_state(const std::string &rom_file)
-{
-    std::string filename = rom_file + ".state";
-    std::ofstream output(filename.data(), std::ios::binary);
-    std::streamsize bytesRead;
-
-    if (output)
-    {
-        output.write(reinterpret_cast<const char *>(&mRegister), sizeof(Registers));
-        output.write(reinterpret_cast<const char *>(mRAM.data()), Ram::ram_size);
-    }
-}
-
-void CPU::load_state(const std::string &rom_file)
-{
-    std::string filename = rom_file + ".state";
-    std::ifstream input(filename.data(), std::ios::binary);
-    std::streamsize bytesRead;
-    std::array<unsigned char, Ram::ram_size> block;
-
-    if (input)
-    {
-        input.read(reinterpret_cast<char *>(&mRegister), sizeof(Registers));
-        input.read(reinterpret_cast<char *>(block.data()), Ram::ram_size);
-        bytesRead = input.gcount();
-        if (bytesRead == Ram::ram_size)
-            mRAM.write_range(block.data(), Ram::ram_size, 0);
-    }
-}
-
+/**
+ * @brief Loads register values from a map.
+ * @param registers_value A map containing register names and their values.
+ */
 void CPU::load_registers(const std::map<std::string, int> &registers_value)
 {
     for (auto &item : registers_value)
     {
-        if (mRegisterIndex.find(item.first) != mRegisterIndex.end())
-            mRegister.regs8[mRegisterIndex[item.first]] = item.second;
+        if (_register_index.find(item.first) != _register_index.end())
+            _registers.regs8[_register_index[item.first]] = item.second;
         else if (item.first == "pc")
-            mRegister.pc = item.second;
+            _registers.pc = item.second;
         else if (item.first == "sp")
-            mRegister.sp = item.second;
+            _registers.sp = item.second;
         else if (item.first == "ime")
-            mRegister.ime = item.second;
+            _registers.ime = item.second;
+        else if (item.first == "hlt")
+            _registers.halt = item.second;
     }
 }
 
+/**
+ * @brief Returns the current register values as a map.
+ * @return A map containing register names and their values.
+ */
 std::map<std::string, int> CPU::get_registers()
 {
     std::map<std::string, int> output;
 
-    for (auto &reg : mRegisterIndex)
-        output[reg.first] = mRegister.regs8[reg.second];
-    output["pc"] = mRegister.pc;
-    output["sp"] = mRegister.sp;
-    output["ime"] = mRegister.ime;
+    for (auto &reg : _register_index)
+        output[reg.first] = _registers.regs8[reg.second];
+    output["pc"] = _registers.pc;
+    output["sp"] = _registers.sp;
+    output["ime"] = _registers.ime;
+    output["hlt"] = _registers.halt;
     return (output);
 }
 
+/**
+ * @brief Decodes and executes the next instruction.
+ * @return The number of cycles taken by the instruction.
+ */
 uint8_t CPU::decode()
 {
-    uint8_t opcode = mRAM[mRegister.pc++];
-    uint8_t reg = mMapReg[(opcode >> 3) & 0x7];
+    uint8_t opcode = _ram[_registers.pc++];
+    uint8_t reg = _map_reg[(opcode >> 3) & 0x7];
     uint16_t address;
     uint16_t value;
-    uint16_t carry = (mRegister.regs8[Reg8::F] >> 4) & 1;
+    uint16_t carry = (_registers.regs8[Reg8::F] >> 4) & 1;
     int8_t relative;
     int8_t cycles_count = 0;
     bool result;
@@ -228,7 +233,7 @@ uint8_t CPU::decode()
     case (0x7c):
     case (0x7d):
     case (0x7f):
-        load_register(reg, mRegister.regs8[mMapReg[opcode & 0x7]]);
+        load_register(reg, _registers.regs8[_map_reg[opcode & 0x7]]);
         cycles_count = 1;
         break;
     case (0x06):
@@ -238,7 +243,7 @@ uint8_t CPU::decode()
     case (0x26):
     case (0x2e):
     case (0x3e):
-        load_register(reg, mRAM[mRegister.pc++]);
+        load_register(reg, _ram[_registers.pc++]);
         cycles_count = 2;
         break;
     case (0x46):
@@ -248,7 +253,7 @@ uint8_t CPU::decode()
     case (0x66):
     case (0x6e):
     case (0x7e):
-        load_register(reg, mRAM[mRegister.regs16[Reg16::HL]]);
+        load_register(reg, _ram[_registers.regs16[Reg16::HL]]);
         cycles_count = 2;
         break;
     case (0x70):
@@ -258,104 +263,104 @@ uint8_t CPU::decode()
     case (0x74):
     case (0x75):
     case (0x77):
-        write_ram(mRegister.regs16[Reg16::HL], mRegister.regs8[mMapReg[opcode & 0x7]]);
+        write_ram(_registers.regs16[Reg16::HL], _registers.regs8[_map_reg[opcode & 0x7]]);
         cycles_count = 2;
         break;
     case (0x36):
-        write_ram(mRegister.regs16[Reg16::HL], mRAM[mRegister.pc++]);
+        write_ram(_registers.regs16[Reg16::HL], _ram[_registers.pc++]);
         cycles_count = 3;
         break;
     case (0x0a):
-        load_register(Reg8::A, mRAM[mRegister.regs16[Reg16::BC]]);
+        load_register(Reg8::A, _ram[_registers.regs16[Reg16::BC]]);
         cycles_count = 2;
         break;
     case (0x1a):
-        load_register(Reg8::A, mRAM[mRegister.regs16[Reg16::DE]]);
+        load_register(Reg8::A, _ram[_registers.regs16[Reg16::DE]]);
         cycles_count = 2;
         break;
     case (0xfa):
-        value = mRAM[mRegister.pc++];
-        value |= mRAM[mRegister.pc++] << 8;
-        load_register(Reg8::A, mRAM[value]);
+        value = _ram[_registers.pc++];
+        value |= _ram[_registers.pc++] << 8;
+        load_register(Reg8::A, _ram[value]);
         cycles_count = 4;
         break;
     case (0x3a):
-        load_register(Reg8::A, mRAM[mRegister.regs16[Reg16::HL]]);
-        mRegister.regs16[Reg16::HL]--;
+        load_register(Reg8::A, _ram[_registers.regs16[Reg16::HL]]);
+        _registers.regs16[Reg16::HL]--;
         cycles_count = 2;
         break;
     case (0x2a):
-        load_register(Reg8::A, mRAM[mRegister.regs16[Reg16::HL]]);
-        mRegister.regs16[Reg16::HL]++;
+        load_register(Reg8::A, _ram[_registers.regs16[Reg16::HL]]);
+        _registers.regs16[Reg16::HL]++;
         cycles_count = 2;
         break;
     case (0xf2):
-        address = 0xFF00 | mRegister.regs8[Reg8::C];
-        load_register(Reg8::A, mRAM[address]);
+        address = 0xFF00 | _registers.regs8[Reg8::C];
+        load_register(Reg8::A, _ram[address]);
         cycles_count = 2;
         break;
     case (0xf0):
-        address = 0xFF00 | mRAM[mRegister.pc++];
-        load_register(Reg8::A, mRAM[address]);
+        address = 0xFF00 | _ram[_registers.pc++];
+        load_register(Reg8::A, _ram[address]);
         cycles_count = 3;
         break;
     case (0x02):
-        write_ram(mRegister.regs16[Reg16::BC], mRegister.regs8[Reg8::A]);
+        write_ram(_registers.regs16[Reg16::BC], _registers.regs8[Reg8::A]);
         cycles_count = 2;
         break;
     case (0x12):
-        write_ram(mRegister.regs16[Reg16::DE], mRegister.regs8[Reg8::A]);
+        write_ram(_registers.regs16[Reg16::DE], _registers.regs8[Reg8::A]);
         cycles_count = 2;
         break;
     case (0xea):
-        value = mRAM[mRegister.pc++];
-        value |= mRAM[mRegister.pc++] << 8;
-        write_ram(value, mRegister.regs8[Reg8::A]);
+        value = _ram[_registers.pc++];
+        value |= _ram[_registers.pc++] << 8;
+        write_ram(value, _registers.regs8[Reg8::A]);
         cycles_count = 4;
         break;
     case (0xe2):
-        address = 0xFF00 | mRegister.regs8[Reg8::C];
-        write_ram(address, mRegister.regs8[Reg8::A]);
+        address = 0xFF00 | _registers.regs8[Reg8::C];
+        write_ram(address, _registers.regs8[Reg8::A]);
         cycles_count = 2;
         break;
     case (0xe0):
-        address = 0xFF00 | mRAM[mRegister.pc++];
-        write_ram(address, mRegister.regs8[Reg8::A]);
+        address = 0xFF00 | _ram[_registers.pc++];
+        write_ram(address, _registers.regs8[Reg8::A]);
         cycles_count = 3;
         break;
     case (0x32):
-        write_ram(mRegister.regs16[Reg16::HL], mRegister.regs8[Reg8::A]);
-        mRegister.regs16[Reg16::HL]--;
+        write_ram(_registers.regs16[Reg16::HL], _registers.regs8[Reg8::A]);
+        _registers.regs16[Reg16::HL]--;
         cycles_count = 2;
         break;
     case (0x22):
-        write_ram(mRegister.regs16[Reg16::HL], mRegister.regs8[Reg8::A]);
-        mRegister.regs16[Reg16::HL]++;
+        write_ram(_registers.regs16[Reg16::HL], _registers.regs8[Reg8::A]);
+        _registers.regs16[Reg16::HL]++;
         cycles_count = 2;
         break;
     case (0x01):
     case (0x11):
     case (0x21):
         reg = (opcode >> 4) & 0x3;
-        value = mRAM[mRegister.pc++];
-        value |= (mRAM[mRegister.pc++] << 8);
+        value = _ram[_registers.pc++];
+        value |= (_ram[_registers.pc++] << 8);
         load_register16(reg, value);
         cycles_count = 3;
         break;
     case (0x31):
-        value = mRAM[mRegister.pc++];
-        value |= (mRAM[mRegister.pc++] << 8);
-        mRegister.sp = value;
+        value = _ram[_registers.pc++];
+        value |= (_ram[_registers.pc++] << 8);
+        _registers.sp = value;
         cycles_count = 3;
         break;
     case (0x08):
-        address = mRAM[mRegister.pc++];
-        address |= (mRAM[mRegister.pc++] << 8);
-        write_ram16(address, mRegister.sp);
+        address = _ram[_registers.pc++];
+        address |= (_ram[_registers.pc++] << 8);
+        write_ram16(address, _registers.sp);
         cycles_count = 5;
         break;
     case (0xf9):
-        mRegister.sp = mRegister.regs16[Reg16::HL];
+        _registers.sp = _registers.regs16[Reg16::HL];
         cycles_count = 2;
         break;
     case (0xc5):
@@ -373,7 +378,7 @@ uint8_t CPU::decode()
         cycles_count = 3;
         break;
     case (0xf8):
-        add_stack(mRAM[mRegister.pc++]);
+        add_stack(_ram[_registers.pc++]);
         cycles_count = 3;
         break;
     case (0x80):
@@ -383,15 +388,15 @@ uint8_t CPU::decode()
     case (0x84):
     case (0x85):
     case (0x87):
-        add(mRegister.regs8[mMapReg[opcode & 0x7]], 0);
+        add(_registers.regs8[_map_reg[opcode & 0x7]], 0);
         cycles_count = 1;
         break;
     case (0x86):
-        add(mRAM[mRegister.regs16[Reg16::HL]], 0);
+        add(_ram[_registers.regs16[Reg16::HL]], 0);
         cycles_count = 2;
         break;
     case (0xc6):
-        add(mRAM[mRegister.pc++], 0);
+        add(_ram[_registers.pc++], 0);
         cycles_count = 2;
         break;
     case (0x88):
@@ -401,15 +406,15 @@ uint8_t CPU::decode()
     case (0x8c):
     case (0x8d):
     case (0x8f):
-        add(mRegister.regs8[mMapReg[opcode & 0x7]], carry);
+        add(_registers.regs8[_map_reg[opcode & 0x7]], carry);
         cycles_count = 1;
         break;
     case (0x8e):
-        add(mRAM[mRegister.regs16[Reg16::HL]], carry);
+        add(_ram[_registers.regs16[Reg16::HL]], carry);
         cycles_count = 2;
         break;
     case (0xce):
-        add(mRAM[mRegister.pc++], carry);
+        add(_ram[_registers.pc++], carry);
         cycles_count = 2;
         break;
     case (0x90):
@@ -419,15 +424,15 @@ uint8_t CPU::decode()
     case (0x94):
     case (0x95):
     case (0x97):
-        sub(mRegister.regs8[mMapReg[opcode & 0x7]], 0);
+        sub(_registers.regs8[_map_reg[opcode & 0x7]], 0);
         cycles_count = 1;
         break;
     case (0x96):
-        sub(mRAM[mRegister.regs16[Reg16::HL]], 0);
+        sub(_ram[_registers.regs16[Reg16::HL]], 0);
         cycles_count = 2;
         break;
     case (0xd6):
-        sub(mRAM[mRegister.pc++], 0);
+        sub(_ram[_registers.pc++], 0);
         cycles_count = 2;
         break;
     case (0x98):
@@ -437,15 +442,15 @@ uint8_t CPU::decode()
     case (0x9c):
     case (0x9d):
     case (0x9f):
-        sub(mRegister.regs8[mMapReg[opcode & 0x7]], carry);
+        sub(_registers.regs8[_map_reg[opcode & 0x7]], carry);
         cycles_count = 1;
         break;
     case (0x9e):
-        sub(mRAM[mRegister.regs16[Reg16::HL]], carry);
+        sub(_ram[_registers.regs16[Reg16::HL]], carry);
         cycles_count = 2;
         break;
     case (0xde):
-        sub(mRAM[mRegister.pc++], carry);
+        sub(_ram[_registers.pc++], carry);
         cycles_count = 2;
         break;
     case (0xb8):
@@ -455,15 +460,15 @@ uint8_t CPU::decode()
     case (0xbc):
     case (0xbd):
     case (0xbf):
-        cp(mRegister.regs8[mMapReg[opcode & 0x7]]);
+        cp(_registers.regs8[_map_reg[opcode & 0x7]]);
         cycles_count = 1;
         break;
     case (0xbe):
-        cp(mRAM[mRegister.regs16[Reg16::HL]]);
+        cp(_ram[_registers.regs16[Reg16::HL]]);
         cycles_count = 2;
         break;
     case (0xfe):
-        cp(mRAM[mRegister.pc++]);
+        cp(_ram[_registers.pc++]);
         cycles_count = 2;
         break;
     case (0x04):
@@ -501,15 +506,15 @@ uint8_t CPU::decode()
     case (0xa4):
     case (0xa5):
     case (0xa7):
-        and_(mRegister.regs8[mMapReg[opcode & 0x7]]);
+        and_(_registers.regs8[_map_reg[opcode & 0x7]]);
         cycles_count = 1;
         break;
     case (0xa6):
-        and_(mRAM[mRegister.regs16[Reg16::HL]]);
+        and_(_ram[_registers.regs16[Reg16::HL]]);
         cycles_count = 2;
         break;
     case (0xe6):
-        and_(mRAM[mRegister.pc++]);
+        and_(_ram[_registers.pc++]);
         cycles_count = 2;
         break;
     case (0xb0):
@@ -519,15 +524,15 @@ uint8_t CPU::decode()
     case (0xb4):
     case (0xb5):
     case (0xb7):
-        or_(mRegister.regs8[mMapReg[opcode & 0x7]]);
+        or_(_registers.regs8[_map_reg[opcode & 0x7]]);
         cycles_count = 1;
         break;
     case (0xb6):
-        or_(mRAM[mRegister.regs16[Reg16::HL]]);
+        or_(_ram[_registers.regs16[Reg16::HL]]);
         cycles_count = 2;
         break;
     case (0xf6):
-        or_(mRAM[mRegister.pc++]);
+        or_(_ram[_registers.pc++]);
         cycles_count = 2;
         break;
     case (0xa8):
@@ -537,15 +542,15 @@ uint8_t CPU::decode()
     case (0xac):
     case (0xad):
     case (0xaf):
-        xor_(mRegister.regs8[mMapReg[opcode & 0x7]]);
+        xor_(_registers.regs8[_map_reg[opcode & 0x7]]);
         cycles_count = 1;
         break;
     case (0xae):
-        xor_(mRAM[mRegister.regs16[Reg16::HL]]);
+        xor_(_ram[_registers.regs16[Reg16::HL]]);
         cycles_count = 2;
         break;
     case (0xee):
-        xor_(mRAM[mRegister.pc++]);
+        xor_(_ram[_registers.pc++]);
         cycles_count = 2;
         break;
     case (0x3f):
@@ -571,7 +576,7 @@ uint8_t CPU::decode()
         cycles_count = 2;
         break;
     case (0x33):
-        mRegister.sp++;
+        _registers.sp++;
         cycles_count = 2;
         break;
     case (0x0b):
@@ -581,79 +586,79 @@ uint8_t CPU::decode()
         cycles_count = 2;
         break;
     case (0x3b):
-        mRegister.sp--;
+        _registers.sp--;
         cycles_count = 2;
         break;
     case (0x09):
     case (0x19):
     case (0x29):
-        add_hl(mRegister.regs16[(opcode >> 4) & 0x3]);
+        add_hl(_registers.regs16[(opcode >> 4) & 0x3]);
         cycles_count = 2;
         break;
     case (0x39):
-        add_hl(mRegister.sp);
+        add_hl(_registers.sp);
         cycles_count = 2;
         break;
     case (0xe8):
-        add_sp(mRAM[mRegister.pc++]);
+        add_sp(_ram[_registers.pc++]);
         cycles_count = 4;
         break;
     case (0x07):
-        mRegister.regs8[Reg8::A] = rotl(mRegister.regs8[Reg8::A], false);
+        _registers.regs8[Reg8::A] = rotl(_registers.regs8[Reg8::A], false);
         cycles_count = 1;
         break;
     case (0x0f):
-        mRegister.regs8[Reg8::A] = rotr(mRegister.regs8[Reg8::A], false);
+        _registers.regs8[Reg8::A] = rotr(_registers.regs8[Reg8::A], false);
         cycles_count = 1;
         break;
     case (0x17):
-        mRegister.regs8[Reg8::A] = rotlc(mRegister.regs8[Reg8::A], false);
+        _registers.regs8[Reg8::A] = rotlc(_registers.regs8[Reg8::A], false);
         cycles_count = 1;
         break;
     case (0x1f):
-        mRegister.regs8[Reg8::A] = rotrc(mRegister.regs8[Reg8::A], false);
+        _registers.regs8[Reg8::A] = rotrc(_registers.regs8[Reg8::A], false);
         cycles_count = 1;
         break;
     case (0xc3):
-        value = mRAM[mRegister.pc++];
-        value |= (mRAM[mRegister.pc++] << 8);
+        value = _ram[_registers.pc++];
+        value |= (_ram[_registers.pc++] << 8);
         jump(value);
         cycles_count = 4;
         break;
     case (0xe9):
-        jump(mRegister.regs16[Reg16::HL]);
+        jump(_registers.regs16[Reg16::HL]);
         cycles_count = 1;
         break;
     case (0xc2):
     case (0xca):
     case (0xd2):
     case (0xda):
-        value = mRAM[mRegister.pc++];
-        value |= (mRAM[mRegister.pc++] << 8);
+        value = _ram[_registers.pc++];
+        value |= (_ram[_registers.pc++] << 8);
         jump_conditionnal(opcode, value);
         cycles_count = 4;
-        if (mRegister.pc != value)
+        if (_registers.pc != value)
             cycles_count--;
         break;
     case (0x18):
-        relative = mRAM[mRegister.pc++];
-        jump(mRegister.pc + relative);
+        relative = _ram[_registers.pc++];
+        jump(_registers.pc + relative);
         cycles_count = 3;
         break;
     case (0x20):
     case (0x28):
     case (0x30):
     case (0x38):
-        relative = mRAM[mRegister.pc++];
-        value = mRegister.pc + relative;
+        relative = _ram[_registers.pc++];
+        value = _registers.pc + relative;
         jump_conditionnal(opcode, value);
         cycles_count = 3;
-        if (mRegister.pc != value)
+        if (_registers.pc != value)
             cycles_count--;
         break;
     case (0xcd):
-        value = mRAM[mRegister.pc++];
-        value |= (mRAM[mRegister.pc++] << 8);
+        value = _ram[_registers.pc++];
+        value |= (_ram[_registers.pc++] << 8);
         call(value);
         cycles_count = 6;
         break;
@@ -661,11 +666,11 @@ uint8_t CPU::decode()
     case (0xcc):
     case (0xd4):
     case (0xdc):
-        value = mRAM[mRegister.pc++];
-        value |= (mRAM[mRegister.pc++] << 8);
+        value = _ram[_registers.pc++];
+        value |= (_ram[_registers.pc++] << 8);
         call_conditionnal(opcode, value);
         cycles_count = 6;
-        if (mRegister.pc != value)
+        if (_registers.pc != value)
             cycles_count = 3;
         break;
     case (0xc9):
@@ -699,11 +704,11 @@ uint8_t CPU::decode()
         cycles_count = 4;
         break;
     case (0x76):
-        HALT();
+        halt();
         cycles_count = 1;
         break;
     case (0x10):
-        STOP();
+        stop();
         cycles_count = 1;
         break;
     case (0xf3):
@@ -725,12 +730,16 @@ uint8_t CPU::decode()
     return (cycles_count);
 }
 
+/**
+ * @brief Decodes and executes an extended opcode instruction.
+ * @return The number of cycles taken by the instruction.
+ */
 inline uint8_t CPU::decodeExtendOpcode()
 {
-    uint8_t opcode = mRAM[mRegister.pc++];
+    uint8_t opcode = _ram[_registers.pc++];
     uint16_t address;
     uint8_t bit;
-    uint8_t reg = mMapReg[opcode & 0x7];
+    uint8_t reg = _map_reg[opcode & 0x7];
     uint8_t value;
     uint8_t cycles_count = 0;
 
@@ -743,12 +752,12 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0x04):
     case (0x05):
     case (0x07):
-        mRegister.regs8[reg] = rotl(mRegister.regs8[reg], true);
+        _registers.regs8[reg] = rotl(_registers.regs8[reg], true);
         cycles_count = 2;
         break;
     case (0x06):
-        address = mRegister.regs16[Reg16::HL];
-        value = mRAM[address];
+        address = _registers.regs16[Reg16::HL];
+        value = _ram[address];
         write_ram(address, rotl(value, true));
         cycles_count = 4;
         break;
@@ -759,12 +768,12 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0x0c):
     case (0x0d):
     case (0x0f):
-        mRegister.regs8[reg] = rotr(mRegister.regs8[reg], true);
+        _registers.regs8[reg] = rotr(_registers.regs8[reg], true);
         cycles_count = 2;
         break;
     case (0x0e):
-        address = mRegister.regs16[Reg16::HL];
-        value = mRAM[address];
+        address = _registers.regs16[Reg16::HL];
+        value = _ram[address];
         write_ram(address, rotr(value, true));
         cycles_count = 4;
         break;
@@ -775,12 +784,12 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0x14):
     case (0x15):
     case (0x17):
-        mRegister.regs8[reg] = rotlc(mRegister.regs8[reg], true);
+        _registers.regs8[reg] = rotlc(_registers.regs8[reg], true);
         cycles_count = 2;
         break;
     case (0x16):
-        address = mRegister.regs16[Reg16::HL];
-        value = mRAM[address];
+        address = _registers.regs16[Reg16::HL];
+        value = _ram[address];
         write_ram(address, rotlc(value, true));
         cycles_count = 4;
         break;
@@ -791,12 +800,12 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0x1c):
     case (0x1d):
     case (0x1f):
-        mRegister.regs8[reg] = rotrc(mRegister.regs8[reg], true);
+        _registers.regs8[reg] = rotrc(_registers.regs8[reg], true);
         cycles_count = 2;
         break;
     case (0x1e):
-        address = mRegister.regs16[Reg16::HL];
-        value = mRAM[address];
+        address = _registers.regs16[Reg16::HL];
+        value = _ram[address];
         write_ram(address, rotrc(value, true));
         cycles_count = 4;
         break;
@@ -807,12 +816,12 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0x24):
     case (0x25):
     case (0x27):
-        mRegister.regs8[reg] = shiftl(mRegister.regs8[reg]);
+        _registers.regs8[reg] = shiftl(_registers.regs8[reg]);
         cycles_count = 2;
         break;
     case (0x26):
-        address = mRegister.regs16[Reg16::HL];
-        value = mRAM[address];
+        address = _registers.regs16[Reg16::HL];
+        value = _ram[address];
         write_ram(address, shiftl(value));
         cycles_count = 4;
         break;
@@ -823,12 +832,12 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0x2c):
     case (0x2d):
     case (0x2f):
-        mRegister.regs8[reg] = shiftr2(mRegister.regs8[reg]);
+        _registers.regs8[reg] = shiftr2(_registers.regs8[reg]);
         cycles_count = 2;
         break;
     case (0x2e):
-        address = mRegister.regs16[Reg16::HL];
-        value = mRAM[address];
+        address = _registers.regs16[Reg16::HL];
+        value = _ram[address];
         write_ram(address, shiftr2(value));
         cycles_count = 4;
         break;
@@ -839,12 +848,12 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0x34):
     case (0x35):
     case (0x37):
-        mRegister.regs8[reg] = swap(mRegister.regs8[reg]);
+        _registers.regs8[reg] = swap(_registers.regs8[reg]);
         cycles_count = 2;
         break;
     case (0x36):
-        address = mRegister.regs16[Reg16::HL];
-        value = mRAM[address];
+        address = _registers.regs16[Reg16::HL];
+        value = _ram[address];
         write_ram(address, swap(value));
         cycles_count = 4;
         break;
@@ -855,12 +864,12 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0x3c):
     case (0x3d):
     case (0x3f):
-        mRegister.regs8[reg] = shiftr(mRegister.regs8[reg]);
+        _registers.regs8[reg] = shiftr(_registers.regs8[reg]);
         cycles_count = 2;
         break;
     case (0x3e):
-        address = mRegister.regs16[Reg16::HL];
-        value = mRAM[address];
+        address = _registers.regs16[Reg16::HL];
+        value = _ram[address];
         write_ram(address, shiftr(value));
         cycles_count = 4;
         break;
@@ -921,7 +930,7 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0x7d):
     case (0x7f):
         bit = (opcode >> 3) & 0x7;
-        bit_test(bit, mRegister.regs8[reg]);
+        bit_test(bit, _registers.regs8[reg]);
         cycles_count = 2;
         break;
     case (0x46):
@@ -932,7 +941,7 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0x6e):
     case (0x76):
     case (0x7e):
-        value = mRAM[mRegister.regs16[Reg16::HL]];
+        value = _ram[_registers.regs16[Reg16::HL]];
         bit = (opcode >> 3) & 0x07;
         bit_test(bit, value);
         cycles_count = 3;
@@ -994,7 +1003,7 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0xbd):
     case (0xbf):
         bit = (opcode >> 3) & 0x7;
-        mRegister.regs8[reg] = bit_reset(bit, mRegister.regs8[reg]);
+        _registers.regs8[reg] = bit_reset(bit, _registers.regs8[reg]);
         cycles_count = 2;
         break;
     case (0x86):
@@ -1005,8 +1014,8 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0xae):
     case (0xb6):
     case (0xbe):
-        address = mRegister.regs16[Reg16::HL];
-        value = mRAM[address];
+        address = _registers.regs16[Reg16::HL];
+        value = _ram[address];
         bit = (opcode >> 3) & 0x7;
         write_ram(address, bit_reset(bit, value));
         cycles_count = 4;
@@ -1068,7 +1077,7 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0xfd):
     case (0xff):
         bit = (opcode >> 3) & 0x7;
-        mRegister.regs8[reg] = bit_set(bit, mRegister.regs8[reg]);
+        _registers.regs8[reg] = bit_set(bit, _registers.regs8[reg]);
         cycles_count = 2;
         break;
     case (0xc6):
@@ -1079,8 +1088,8 @@ inline uint8_t CPU::decodeExtendOpcode()
     case (0xee):
     case (0xf6):
     case (0xfe):
-        address = mRegister.regs16[Reg16::HL];
-        value = mRAM[address];
+        address = _registers.regs16[Reg16::HL];
+        value = _ram[address];
         bit = (opcode >> 3) & 0x7;
         write_ram(address, bit_set(bit, value));
         cycles_count = 4;
@@ -1089,388 +1098,575 @@ inline uint8_t CPU::decodeExtendOpcode()
     return (cycles_count);
 }
 
+/**
+ * @brief Loads a value into the specified 8-bit register.
+ * @param reg The index of the 8-bit register to load into.
+ * @param value The value to load into the register.
+ */
 inline void CPU::load_register(uint8_t reg, uint8_t value)
 {
-    mRegister.regs8[reg] = value;
+    _registers.regs8[reg] = value;
 }
 
+/**
+ * @brief Writes a value to the specified memory address in RAM.
+ * @param address The memory address to write to.
+ * @param value The value to write to the memory address.
+ */
 inline void CPU::write_ram(uint16_t address, uint8_t value)
 {
-    mRAM.write(address, value);
+    _ram.write(address, value);
 }
 
+/**
+ * @brief Loads a value into the specified 16-bit register.
+ * @param reg The index of the 16-bit register to load into.
+ * @param value The value to load into the register.
+ */
 inline void CPU::load_register16(uint8_t reg, uint16_t value)
 {
-    mRegister.regs16[reg] = value;
+    _registers.regs16[reg] = value;
 }
 
+/**
+ * @brief Writes a 16-bit value to the specified memory address in RAM.
+ * @param address The starting memory address to write the low byte of the value.
+ * @param value The 16-bit value to write to memory.
+ */
 inline void CPU::write_ram16(uint16_t address, uint16_t value)
 {
-    mRAM.write(address++, value & 0xFF);
-    mRAM.write(address, (value >> 8) & 0xFF);
+    _ram.write(address++, value & 0xFF);
+    _ram.write(address, (value >> 8) & 0xFF);
 }
 
+/**
+ * @brief Pushes the value of the specified 16-bit register onto the stack.
+ * @param reg The index of the 16-bit register to push.
+ */
 inline void CPU::push(uint8_t reg)
 {
-    mRegister.sp--;
-    mRAM.write_register(mRegister.sp--, (mRegister.regs16[reg] >> 8) & 0xFF);
-    mRAM.write_register(mRegister.sp, mRegister.regs16[reg] & 0xFF);
+    _registers.sp--;
+    _ram.write_register(_registers.sp--, (_registers.regs16[reg] >> 8) & 0xFF);
+    _ram.write_register(_registers.sp, _registers.regs16[reg] & 0xFF);
 }
 
+/**
+ * @brief Pops a 16-bit value from the stack into the specified register.
+ * @param reg The index of the 16-bit register to pop into.
+ */
 inline void CPU::pop(uint8_t reg)
 {
-    uint16_t Value = mRAM[mRegister.sp++];
+    uint16_t Value = _ram[_registers.sp++];
 
-    Value |= (mRAM[mRegister.sp++] << 8);
-    mRegister.regs16[reg] = Value;
-    mRegister.regs8[Reg8::F] &= 0xF0;
+    Value |= (_ram[_registers.sp++] << 8);
+    _registers.regs16[reg] = Value;
+    _registers.regs8[Reg8::F] &= 0xF0;
 }
 
+/**
+ * @brief Adds a signed 8-bit value to the stack pointer and stores the result in HL, updating flags.
+ * @param value The signed 8-bit value to add to the stack pointer.
+ */
 inline void CPU::add_stack(int8_t value)
 {
-    uint16_t sp = mRegister.sp;
+    uint16_t sp = _registers.sp;
     uint16_t result = sp + value;
     uint16_t half_result = (sp & 0xF) + (value & 0xF);
 
-    mRegister.regs16[Reg16::HL] = result & 0xFFFF;
-    mRegister.regs8[Reg8::F] = 0;
+    _registers.regs16[Reg16::HL] = result & 0xFFFF;
+    _registers.regs8[Reg8::F] = 0;
     if (half_result > 0xF)
-        mRegister.regs8[Reg8::F] |= Flags::h;
+        _registers.regs8[Reg8::F] |= Flags::h;
     if ((sp & 0xFF) + static_cast<uint8_t>(value) > 0xFF)
-        mRegister.regs8[Reg8::F] |= Flags::c;
+        _registers.regs8[Reg8::F] |= Flags::c;
 }
 
+/**
+ * @brief Adds a value and an optional carry to the accumulator, updating flags.
+ * @param value The value to add to the accumulator.
+ * @param carry The carry value to add (0 or 1).
+ */
 inline void CPU::add(uint8_t value, uint8_t carry)
 {
-    uint16_t a = mRegister.regs8[Reg8::A];
+    uint16_t a = _registers.regs8[Reg8::A];
     uint16_t result = a + value + carry;
     uint8_t half_result = (a & 0x0F) + (value & 0x0F) + (carry & 0x0F);
 
-    mRegister.regs8[Reg8::A] = result & 0xFF;
-    mRegister.regs8[Reg8::F] = 0;
-    if (mRegister.regs8[Reg8::A] == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+    _registers.regs8[Reg8::A] = result & 0xFF;
+    _registers.regs8[Reg8::F] = 0;
+    if (_registers.regs8[Reg8::A] == 0)
+        _registers.regs8[Reg8::F] |= Flags::z;
     if (half_result > 0x0F)
-        mRegister.regs8[Reg8::F] |= Flags::h;
+        _registers.regs8[Reg8::F] |= Flags::h;
     if (result > 0xFF)
-        mRegister.regs8[Reg8::F] |= Flags::c;
+        _registers.regs8[Reg8::F] |= Flags::c;
 }
 
+/**
+ * @brief Subtracts a value and an optional carry from the accumulator, updating flags.
+ * @param value The value to subtract from the accumulator.
+ * @param carry The carry value to subtract (0 or 1).
+ */
 inline void CPU::sub(uint8_t value, uint8_t carry)
 {
-    uint8_t a = mRegister.regs8[Reg8::A];
+    uint8_t a = _registers.regs8[Reg8::A];
 
-    mRegister.regs8[Reg8::A] = a - value - carry;
-    mRegister.regs8[Reg8::F] = Flags::n;
-    if (mRegister.regs8[Reg8::A] == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+    _registers.regs8[Reg8::A] = a - value - carry;
+    _registers.regs8[Reg8::F] = Flags::n;
+    if (_registers.regs8[Reg8::A] == 0)
+        _registers.regs8[Reg8::F] |= Flags::z;
     if ((a & 0x0F) < ((value & 0x0F) + (carry & 0x0F)))
-        mRegister.regs8[Reg8::F] |= Flags::h;
+        _registers.regs8[Reg8::F] |= Flags::h;
     if (a < (value + carry))
-        mRegister.regs8[Reg8::F] |= Flags::c;
+        _registers.regs8[Reg8::F] |= Flags::c;
 }
 
+/**
+ * @brief Compares the accumulator with a value, updating flags without storing the result.
+ * @param value The value to compare with the accumulator.
+ */
 inline void CPU::cp(uint8_t value)
 {
-    uint8_t a = mRegister.regs8[Reg8::A];
+    uint8_t a = _registers.regs8[Reg8::A];
     uint8_t result = a - value;
 
-    mRegister.regs8[Reg8::F] = Flags::n;
+    _registers.regs8[Reg8::F] = Flags::n;
     if (result == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     if ((a & 0x0F) < (value & 0x0F))
-        mRegister.regs8[Reg8::F] |= Flags::h;
+        _registers.regs8[Reg8::F] |= Flags::h;
     if (a < value)
-        mRegister.regs8[Reg8::F] |= Flags::c;
+        _registers.regs8[Reg8::F] |= Flags::c;
 }
 
+/**
+ * @brief Increments the specified 8-bit register and updates flags.
+ * @param reg The index of the 8-bit register to increment.
+ */
 inline void CPU::inc(uint8_t reg)
 {
-    uint8_t value = mRegister.regs8[reg];
+    uint8_t value = _registers.regs8[reg];
 
-    mRegister.regs8[reg]++;
-    mRegister.regs8[Reg8::F] &= Flags::c;
-    if (mRegister.regs8[reg] == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+    _registers.regs8[reg]++;
+    _registers.regs8[Reg8::F] &= Flags::c;
+    if (_registers.regs8[reg] == 0)
+        _registers.regs8[Reg8::F] |= Flags::z;
     if ((value & 0xF) == 0xF)
-        mRegister.regs8[Reg8::F] |= Flags::h;
+        _registers.regs8[Reg8::F] |= Flags::h;
 }
 
+/**
+ * @brief Increments the value at the memory address pointed to by HL and updates flags.
+ */
 inline void CPU::inc_hl()
 {
-    uint16_t addr = mRegister.regs16[Reg16::HL];
-    uint8_t old_value = mRAM[addr];
+    uint16_t addr = _registers.regs16[Reg16::HL];
+    uint8_t old_value = _ram[addr];
     uint8_t new_value = old_value + 1;
 
     write_ram(addr, new_value);
-    mRegister.regs8[Reg8::F] &= Flags::c;
+    _registers.regs8[Reg8::F] &= Flags::c;
     if (new_value == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     if ((old_value & 0x0F) == 0x0F)
-        mRegister.regs8[Reg8::F] |= Flags::h;
+        _registers.regs8[Reg8::F] |= Flags::h;
 }
 
+/**
+ * @brief Decrements the specified 8-bit register and updates flags.
+ * @param reg The index of the 8-bit register to decrement.
+ */
 inline void CPU::dec(uint8_t reg)
 {
-    mRegister.regs8[reg]--;
-    mRegister.regs8[Reg8::F] &= Flags::c;
-    mRegister.regs8[Reg8::F] |= Flags::n;
-    if (mRegister.regs8[reg] == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
-    if ((mRegister.regs8[reg] & 0xF) == 0xF)
-        mRegister.regs8[Reg8::F] |= Flags::h;
+    _registers.regs8[reg]--;
+    _registers.regs8[Reg8::F] &= Flags::c;
+    _registers.regs8[Reg8::F] |= Flags::n;
+    if (_registers.regs8[reg] == 0)
+        _registers.regs8[Reg8::F] |= Flags::z;
+    if ((_registers.regs8[reg] & 0xF) == 0xF)
+        _registers.regs8[Reg8::F] |= Flags::h;
 }
 
+/**
+ * @brief Decrements the value at the memory address pointed to by HL and updates flags.
+ */
 inline void CPU::dec_hl()
 {
-    uint8_t a = mRAM[mRegister.regs16[Reg16::HL]];
+    uint8_t a = _ram[_registers.regs16[Reg16::HL]];
 
     a--;
-    write_ram(mRegister.regs16[Reg16::HL], a);
-    mRegister.regs8[Reg8::F] &= Flags::c;
-    mRegister.regs8[Reg8::F] |= Flags::n;
+    write_ram(_registers.regs16[Reg16::HL], a);
+    _registers.regs8[Reg8::F] &= Flags::c;
+    _registers.regs8[Reg8::F] |= Flags::n;
     if (a == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     if ((a & 0xF) == 0xF)
-        mRegister.regs8[Reg8::F] |= Flags::h;
+        _registers.regs8[Reg8::F] |= Flags::h;
 }
 
+/**
+ * @brief Performs a bitwise AND between the accumulator and the specified value, updating flags.
+ * @param value The value to AND with the accumulator.
+ */
 inline void CPU::and_(uint8_t value)
 {
-    mRegister.regs8[Reg8::A] &= value;
-    mRegister.regs8[Reg8::F] = Flags::h;
-    if (mRegister.regs8[Reg8::A] == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+    _registers.regs8[Reg8::A] &= value;
+    _registers.regs8[Reg8::F] = Flags::h;
+    if (_registers.regs8[Reg8::A] == 0)
+        _registers.regs8[Reg8::F] |= Flags::z;
 }
 
+/**
+ * @brief Performs a bitwise OR between the accumulator and the specified value, updating flags.
+ * @param value The value to OR with the accumulator.
+ */
 inline void CPU::or_(uint8_t value)
 {
-    mRegister.regs8[Reg8::A] |= value;
-    mRegister.regs8[Reg8::F] = 0;
-    if (mRegister.regs8[Reg8::A] == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+    _registers.regs8[Reg8::A] |= value;
+    _registers.regs8[Reg8::F] = 0;
+    if (_registers.regs8[Reg8::A] == 0)
+        _registers.regs8[Reg8::F] |= Flags::z;
 }
 
+/**
+ * @brief Performs a bitwise XOR between the accumulator and the specified value, updating flags.
+ * @param value The value to XOR with the accumulator.
+ */
 inline void CPU::xor_(uint8_t value)
 {
-    mRegister.regs8[Reg8::A] ^= value;
-    mRegister.regs8[Reg8::F] = 0;
-    if (mRegister.regs8[Reg8::A] == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+    _registers.regs8[Reg8::A] ^= value;
+    _registers.regs8[Reg8::F] = 0;
+    if (_registers.regs8[Reg8::A] == 0)
+        _registers.regs8[Reg8::F] |= Flags::z;
 }
 
+/**
+ * @brief Complements the carry flag.
+ */
 inline void CPU::ccf()
 {
-    uint8_t flags = mRegister.regs8[Reg8::F];
-    mRegister.regs8[Reg8::F] = (~flags & 0x10) | (flags & 0x80);
+    uint8_t flags = _registers.regs8[Reg8::F];
+    _registers.regs8[Reg8::F] = (~flags & 0x10) | (flags & 0x80);
 }
 
+/**
+ * @brief Sets the carry flag to 1.
+ */
 inline void CPU::scf()
 {
-    uint8_t flags = mRegister.regs8[Reg8::F];
-    mRegister.regs8[Reg8::F] = 0x10 | (flags & 0x80);
+    uint8_t flags = _registers.regs8[Reg8::F];
+    _registers.regs8[Reg8::F] = 0x10 | (flags & 0x80);
 }
 
+/**
+ * @brief Adjusts the accumulator to binary-coded decimal (BCD) after an arithmetic operation.
+ */
 inline void CPU::daa()
 {
-    uint16_t a = mRegister.regs8[Reg8::A] | ((mRegister.regs8[Reg8::F] & 0x7F) << 4);
+    uint16_t a = _registers.regs8[Reg8::A] | ((_registers.regs8[Reg8::F] & 0x7F) << 4);
     uint16_t result = intToBcd[a];
 
-    mRegister.regs8[Reg8::A] = result & 0xFF;
-    mRegister.regs8[Reg8::F] &= Flags::n;
+    _registers.regs8[Reg8::A] = result & 0xFF;
+    _registers.regs8[Reg8::F] &= Flags::n;
     if ((result & 0xFF) == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     if (result & 0x200)
-        mRegister.regs8[Reg8::F] |= Flags::c;
+        _registers.regs8[Reg8::F] |= Flags::c;
 }
 
+/**
+ * @brief Complements the accumulator (inverts all bits).
+ */
 inline void CPU::cpl()
 {
-    mRegister.regs8[Reg8::A] = ~mRegister.regs8[Reg8::A];
-    mRegister.regs8[Reg8::F] |= Flags::n;
-    mRegister.regs8[Reg8::F] |= Flags::h;
+    _registers.regs8[Reg8::A] = ~_registers.regs8[Reg8::A];
+    _registers.regs8[Reg8::F] |= Flags::n;
+    _registers.regs8[Reg8::F] |= Flags::h;
 }
 
+/**
+ * @brief Increments the specified 16-bit register.
+ * @param reg The index of the 16-bit register to increment.
+ */
 inline void CPU::inc16(uint8_t reg)
 {
-    mRegister.regs16[reg]++;
+    _registers.regs16[reg]++;
 }
 
+/**
+ * @brief Decrements the specified 16-bit register.
+ * @param reg The index of the 16-bit register to decrement.
+ */
 inline void CPU::dec16(uint8_t reg)
 {
-    mRegister.regs16[reg]--;
+    _registers.regs16[reg]--;
 }
 
+/**
+ * @brief Adds a 16-bit value to HL and updates flags.
+ * @param rr The 16-bit value to add to HL.
+ */
 inline void CPU::add_hl(uint16_t rr)
 {
-    uint32_t hl = mRegister.regs16[Reg16::HL];
+    uint32_t hl = _registers.regs16[Reg16::HL];
     uint32_t result = hl + rr;
     uint16_t half_result = (hl & 0xFFF) + (rr & 0xFFF);
 
-    mRegister.regs16[Reg16::HL] = result & 0xFFFF;
-    mRegister.regs8[Reg8::F] &= Flags::z;
+    _registers.regs16[Reg16::HL] = result & 0xFFFF;
+    _registers.regs8[Reg8::F] &= Flags::z;
     if (half_result > 0xFFF)
-        mRegister.regs8[Reg8::F] |= Flags::h;
+        _registers.regs8[Reg8::F] |= Flags::h;
     if (result > 0xFFFF)
-        mRegister.regs8[Reg8::F] |= Flags::c;
+        _registers.regs8[Reg8::F] |= Flags::c;
 }
 
+/**
+ * @brief Adds a signed 8-bit value to the stack pointer and updates flags.
+ * @param value The signed 8-bit value to add to the stack pointer.
+ */
 inline void CPU::add_sp(int8_t value)
 {
-    uint16_t sp = mRegister.sp;
+    uint16_t sp = _registers.sp;
     uint16_t result = sp + value;
     uint16_t half_result = (sp & 0xF) + (value & 0xF);
 
-    mRegister.sp = result & 0xFFFF;
-    mRegister.regs8[Reg8::F] = 0;
+    _registers.sp = result & 0xFFFF;
+    _registers.regs8[Reg8::F] = 0;
     if (half_result > 0xF)
-        mRegister.regs8[Reg8::F] |= Flags::h;
+        _registers.regs8[Reg8::F] |= Flags::h;
     if ((sp & 0xFF) + static_cast<uint8_t>(value) > 0xFF)
-        mRegister.regs8[Reg8::F] |= Flags::c;
+        _registers.regs8[Reg8::F] |= Flags::c;
 }
 
+/**
+ * @brief Rotates the bits of the value left, updating the carry flag and optionally the zero flag.
+ * @param value The value to rotate.
+ * @param zflag Indicates whether the zero flag should be updated if the result is zero.
+ * @return The value after rotation.
+ */
 inline uint8_t CPU::rotl(uint8_t value, bool zflag)
 {
     value = (value << 1) | (value >> 7);
-    mRegister.regs8[Reg8::F] = (value & 1) << 4; // C flag
+    _registers.regs8[Reg8::F] = (value & 1) << 4; // C flag
     if (zflag && value == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     return (value);
 }
 
+/**
+ * @brief Rotates the bits of the value left through the carry flag, updating flags.
+ * @param value The value to rotate.
+ * @param zflag Indicates whether the zero flag should be updated if the result is zero.
+ * @return The value after rotation.
+ */
 inline uint8_t CPU::rotlc(uint8_t value, bool zflag)
 {
-    int8_t carry = (mRegister.regs8[Reg8::F] >> 4) & 1;
+    int8_t carry = (_registers.regs8[Reg8::F] >> 4) & 1;
 
-    mRegister.regs8[Reg8::F] = (value >> 3) & 0x10; // C flag
+    _registers.regs8[Reg8::F] = (value >> 3) & 0x10; // C flag
     value = (value << 1) | carry;
     if (zflag && value == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     return (value);
 }
 
+/**
+ * @brief Rotates the bits of the value right, updating the carry flag and optionally the zero flag.
+ * @param value The value to rotate.
+ * @param zflag Indicates whether the zero flag should be updated if the result is zero.
+ * @return The value after rotation.
+ */
 inline uint8_t CPU::rotr(uint8_t value, bool zflag)
 {
     value = (value >> 1) | (value << 7);
-    mRegister.regs8[Reg8::F] = (value >> 3) & 0x10; // C flag
+    _registers.regs8[Reg8::F] = (value >> 3) & 0x10; // C flag
     if (zflag && value == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     return (value);
 }
 
+/**
+ * @brief Rotates the bits of the value right through the carry flag, updating flags.
+ * @param value The value to rotate.
+ * @param zflag Indicates whether the zero flag should be updated if the result is zero.
+ * @return The value after rotation.
+ */
 inline uint8_t CPU::rotrc(uint8_t value, bool zflag)
 {
-    int8_t carry = (mRegister.regs8[Reg8::F] >> 4) & 1;
+    int8_t carry = (_registers.regs8[Reg8::F] >> 4) & 1;
 
-    mRegister.regs8[Reg8::F] = (value & 1) << 4; // C flag
+    _registers.regs8[Reg8::F] = (value & 1) << 4; // C flag
     value = (value >> 1) | (carry << 7);
     if (zflag && value == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     return (value);
 }
 
+/**
+ * @brief Shifts the bits of the value left, updating the carry and zero flags.
+ * @param value The value to shift.
+ * @return The value after shifting.
+ */
 inline uint8_t CPU::shiftl(uint8_t value)
 {
-    mRegister.regs8[Reg8::F] = (value >> 3) & 0x10; // C flag
+    _registers.regs8[Reg8::F] = (value >> 3) & 0x10; // C flag
     value = (value << 1) & 0xFE;
     if (value == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     return (value);
 }
 
+/**
+ * @brief Shifts the bits of the value right logically, updating the carry and zero flags.
+ * @param value The value to shift.
+ * @return The value after shifting.
+ */
 inline uint8_t CPU::shiftr(uint8_t value)
 {
-    mRegister.regs8[Reg8::F] = (value << 4) & 0x10; // C flag
+    _registers.regs8[Reg8::F] = (value << 4) & 0x10; // C flag
     value >>= 1;
     if (value == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     return (value);
 }
 
+/**
+ * @brief Shifts the bits of the value right arithmetically, updating the carry and zero flags.
+ * @param value The value to shift.
+ * @return The value after shifting.
+ */
 inline uint8_t CPU::shiftr2(uint8_t value)
 {
-    mRegister.regs8[Reg8::F] = (value << 4) & 0x10; // C flag
+    _registers.regs8[Reg8::F] = (value << 4) & 0x10; // C flag
     value = (value & 0x80) | (value >> 1);
     if (value == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     return (value);
 }
 
+/**
+ * @brief Swaps the high and low nibbles of the value and updates the zero flag.
+ * @param value The value whose nibbles are to be swapped.
+ * @return The value with swapped nibbles.
+ */
 inline uint8_t CPU::swap(uint8_t value)
 {
     value = (value >> 4) | (value << 4);
-    mRegister.regs8[Reg8::F] = 0;
+    _registers.regs8[Reg8::F] = 0;
     if (value == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
+        _registers.regs8[Reg8::F] |= Flags::z;
     return (value);
 }
 
+/**
+ * @brief Tests a specific bit in a value and updates flags.
+ * @param bit The bit position to test (0-7).
+ * @param value The value in which to test the bit.
+ */
 inline void CPU::bit_test(uint8_t bit, uint8_t value)
 {
     value &= (1 << bit);
-    mRegister.regs8[Reg8::F] &= Flags::c;
+    _registers.regs8[Reg8::F] &= Flags::c;
     if (value == 0)
-        mRegister.regs8[Reg8::F] |= Flags::z;
-    mRegister.regs8[Reg8::F] |= Flags::h;
+        _registers.regs8[Reg8::F] |= Flags::z;
+    _registers.regs8[Reg8::F] |= Flags::h;
 }
 
+/**
+ * @brief Sets a specific bit in a value to 1.
+ * @param bit The bit position to set (0-7).
+ * @param value The value in which to set the bit.
+ * @return The value with the specified bit set to 1.
+ */
 uint8_t CPU::bit_set(uint8_t bit, uint8_t value)
 {
     return (value | (1 << bit));
 }
 
+/**
+ * @brief Resets a specific bit in a value to 0.
+ * @param bit The bit position to reset (0-7).
+ * @param value The value in which to reset the bit.
+ * @return The value with the specified bit reset to 0.
+ */
 uint8_t CPU::bit_reset(uint8_t bit, uint8_t value)
 {
     value &= ~(1 << bit);
     return (value);
 }
 
+/**
+ * @brief Jumps to the specified address by updating the program counter.
+ * @param addr The address to jump to.
+ */
 inline void CPU::jump(uint16_t addr)
 {
-    mRegister.pc = addr;
+    _registers.pc = addr;
 }
 
+/**
+ * @brief Performs a conditional jump based on the opcode and current flags.
+ * @param opcode The opcode determining the condition.
+ * @param addr The address to jump to if the condition is met.
+ */
 inline void CPU::jump_conditionnal(uint8_t opcode, uint16_t addr)
 {
     uint8_t cc = (opcode >> 3) & 0x3;
-    uint8_t c = (mRegister.regs8[Reg8::F] & Flags::c) >> 4;
-    uint8_t z = (mRegister.regs8[Reg8::F] & Flags::z) >> 7;
+    uint8_t c = (_registers.regs8[Reg8::F] & Flags::c) >> 4;
+    uint8_t z = (_registers.regs8[Reg8::F] & Flags::z) >> 7;
 
     if ((cc == 0 && z == 0) || (cc == 1 && z == 1) || (cc == 2 && c == 0) || (cc == 3 && c == 1))
-        mRegister.pc = addr;
+        _registers.pc = addr;
 }
 
+/**
+ * @brief Calls a subroutine at the specified address, pushing the current PC onto the stack.
+ * @param addr The address of the subroutine to call.
+ */
 inline void CPU::call(uint16_t addr)
 {
-    mRegister.sp--;
-    mRAM.write_register(mRegister.sp--, (mRegister.pc >> 8) & 0xFF);
-    mRAM.write_register(mRegister.sp, mRegister.pc & 0xFF);
+    _registers.sp--;
+    _ram.write_register(_registers.sp--, (_registers.pc >> 8) & 0xFF);
+    _ram.write_register(_registers.sp, _registers.pc & 0xFF);
     jump(addr);
 }
 
+/**
+ * @brief Performs a conditional call based on the opcode and current flags.
+ * @param opcode The opcode determining the condition.
+ * @param addr The address to call if the condition is met.
+ */
 inline void CPU::call_conditionnal(uint8_t opcode, uint16_t addr)
 {
     uint8_t cc = (opcode >> 3) & 0x3;
-    uint8_t c = (mRegister.regs8[Reg8::F] & Flags::c) >> 4;
-    uint8_t z = (mRegister.regs8[Reg8::F] & Flags::z) >> 7;
+    uint8_t c = (_registers.regs8[Reg8::F] & Flags::c) >> 4;
+    uint8_t z = (_registers.regs8[Reg8::F] & Flags::z) >> 7;
 
     if ((cc == 0 && z == 0) || (cc == 1 && z == 1) || (cc == 2 && c == 0) || (cc == 3 && c == 1))
         call(addr);
 }
 
+/**
+ * @brief Returns from a subroutine by popping the PC from the stack.
+ */
 inline void CPU::ret()
 {
-    uint16_t addr = mRAM[mRegister.sp++];
+    uint16_t addr = _ram[_registers.sp++];
 
-    addr |= mRAM[mRegister.sp++] << 8;
-    mRegister.pc = addr;
+    addr |= _ram[_registers.sp++] << 8;
+    _registers.pc = addr;
 }
 
+/**
+ * @brief Performs a conditional return based on the opcode and current flags.
+ * @param opcode The opcode determining the condition.
+ * @return `true` if the return was performed, `false` otherwise.
+ */
 inline bool CPU::ret_conditionnal(uint8_t opcode)
 {
     uint8_t cc = (opcode >> 3) & 0x3;
-    uint8_t c = (mRegister.regs8[Reg8::F] & Flags::c) >> 4;
-    uint8_t z = (mRegister.regs8[Reg8::F] & Flags::z) >> 7;
+    uint8_t c = (_registers.regs8[Reg8::F] & Flags::c) >> 4;
+    uint8_t z = (_registers.regs8[Reg8::F] & Flags::z) >> 7;
 
     if ((cc == 0 && z == 0) || (cc == 1 && z == 1) || (cc == 2 && c == 0) || (cc == 3 && c == 1))
     {
@@ -1480,32 +1676,54 @@ inline bool CPU::ret_conditionnal(uint8_t opcode)
     return (false);
 }
 
-inline void CPU::HALT()
+/**
+ * @brief Puts the CPU into a halted state.
+ */
+inline void CPU::halt()
 {
+    _registers.halt = 1;
 }
 
-inline void CPU::STOP()
+/**
+ * @brief Stops the CPU and resets the divider register.
+ */
+inline void CPU::stop()
 {
-    mRAM.write(Timer::Register::DIV, 0);
+    _ram.write_register(Timer::Register::DIV, 0);
 }
 
+/**
+ * @brief Disables interrupts.
+ */
 inline void CPU::di()
 {
-    mRegister.ime = 0;
+    _registers.ime = 0;
 }
 
+/**
+ * @brief Enables interrupts.
+ */
 inline void CPU::ei()
 {
-    mRegister.ime = 1;
+    _registers.ime = 1;
 }
 
+/**
+ * @brief Performs a no-operation (NOP).
+ */
 inline void CPU::nop()
 {
 }
 
-inline uint8_t CPU::active_interrupt(uint16_t addr)
+/**
+ * @brief Handles an active interrupt by resetting the interrupt flag, disabling interrupts, and calling the handler.
+ * @param bit Interrupt bit
+ * @param addr The address of the interrupt handler.
+ * @return The number of cycles taken (5).
+ */
+inline uint8_t CPU::active_interrupt(uint8_t bit, uint16_t addr)
 {
-    mRAM.write(Register::IF, 0);
+    _ram.write_register(Register::IF, _ram[Register::IF] & ~bit);
     di();
     call(addr);
     return (5);

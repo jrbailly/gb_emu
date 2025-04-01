@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
+#include <fstream>
+#include <nlohmann/json.hpp>
 #include <thread>
 
 /**
@@ -45,50 +47,15 @@ auto Emulator::loop() -> void
     uint32_t cycles = 0;
     uint32_t cycles_count = 0;
     uint16_t last_addr;
-    SDL_Event event;
 
-    std::thread worker([&]() {
-        while (true)
-        {
-            _ram.save_ram(_config.mRomFile);
-            std::this_thread::sleep_for(std::chrono::minutes(1));
-        }
-    });
-    worker.detach();
     while (true)
     {
         auto start_time = std::chrono::high_resolution_clock::now();
 
         cycles = 0;
         cycles_count = 0;
-        while (::SDL_PollEvent(&event) != 0)
-        {
-            switch (event.type)
-            {
-            case SDL_EVENT_QUIT:
-                _ram.save_ram(_config.mRomFile);
-                return;
-                break;
-            case SDL_EVENT_KEY_DOWN:
-                _controllers->setInput(event.key);
-                if (event.key.key == SDLK_F1)
-                    _cpu->save_state(_config.mRomFile);
-                if (event.key.key == SDLK_F2)
-                    _cpu->load_state(_config.mRomFile);
-                break;
-            case SDL_EVENT_KEY_UP:
-                _controllers->setInput(event.key);
-                break;
-            case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-                _controllers->setInput(event.gbutton);
-                break;
-            case SDL_EVENT_GAMEPAD_BUTTON_UP:
-                _controllers->setInput(event.gbutton);
-                break;
-            default:
-                break;
-            }
-        }
+        if (process_sdl_events())
+            return;
         while (cycles_count < frame_cycle_count)
         {
             //_cpu->debug(cycles_count);
@@ -103,8 +70,77 @@ auto Emulator::loop() -> void
         auto end_time = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
         SDL_DelayPrecise(1000.0 * (frame_duration - elapsed));
-        /*FILE *f = fopen("ram", "wb");
-        fwrite(_ram.data(), 1, 65535, f);
-        fclose(f);*/
     }
+}
+
+/**
+ * @brief Process sdl events
+ *
+ */
+auto Emulator::process_sdl_events() -> bool
+{
+    SDL_Event event;
+
+    while (::SDL_PollEvent(&event) != 0)
+    {
+        switch (event.type)
+        {
+        case SDL_EVENT_QUIT:
+            _ram.save_ram(_config.mRomFile);
+            return (true);
+            break;
+        case SDL_EVENT_KEY_DOWN:
+            _controllers->setInput(event.key);
+            if (event.key.key == SDLK_F1)
+                save_state();
+            if (event.key.key == SDLK_F2)
+                load_state();
+            break;
+        case SDL_EVENT_KEY_UP:
+            _controllers->setInput(event.key);
+            break;
+        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+            _controllers->setInput(event.gbutton);
+            break;
+        case SDL_EVENT_GAMEPAD_BUTTON_UP:
+            _controllers->setInput(event.gbutton);
+            break;
+        default:
+            break;
+        }
+    }
+    return (false);
+}
+
+auto Emulator::save_state() -> void
+{
+    nlohmann::json state;
+    std::string filename = _config.mRomFile + ".json";
+    std::ofstream file(filename.data());
+
+    if (!file.is_open())
+        throw std::runtime_error(std::format("cannot open file : {}", filename));
+    state["cpu"] = _cpu->get_registers();
+    state["ram"] = _ram.getDatas();
+    if (file)
+        file << state;
+}
+
+auto Emulator::load_state() -> void
+{
+    nlohmann::json state;
+    std::string filename = _config.mRomFile + ".json";
+    std::ifstream file(filename.data());
+    std::map<std::string, int> registers;
+    int address = 0;
+
+    if (!file.is_open())
+        throw std::runtime_error(std::format("cannot open file : {}", filename));
+    file >> state;
+    for (auto &[key, value] : state["cpu"].items())
+        registers[key] = value;
+    _cpu->load_registers(registers);
+
+    for (auto &value : state["ram"])
+        _ram.write_register(address++, value.get<unsigned char>());
 }

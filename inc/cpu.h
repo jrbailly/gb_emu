@@ -13,6 +13,7 @@ static constexpr int CPU_FREQ = 4194304;
 
 struct Registers
 {
+    unsigned char halt;
     unsigned char ime;
     unsigned short pc;
     unsigned short sp;
@@ -29,8 +30,6 @@ class CPU
     CPU(RamBus &ram);
     void debug(uint32_t cycles);
     uint8_t step();
-    void save_state(const std::string &rom_file);
-    void load_state(const std::string &rom_file);
     void load_registers(const std::map<std::string, int> &registers_value);
     std::map<std::string, int> get_registers();
 
@@ -65,6 +64,14 @@ class CPU
         h = 0x20,
         n = 0x40,
         z = 0x80
+    };
+    enum InterruptAddress
+    {
+        VBLANK = 0x40,
+        STAT = 0x48,
+        TIMER = 0x50,
+        SERIAL = 0x58,
+        JOYPAD = 0x60
     };
 
   private:
@@ -110,21 +117,20 @@ class CPU
     void call_conditionnal(uint8_t opcode, uint16_t addr);
     void ret();
     bool ret_conditionnal(uint8_t opcode);
-    // miscellaneous instructions
-    void HALT();
-    void STOP();
+    void halt();
+    void stop();
     void di();
     void ei();
     void nop();
-    uint8_t active_interrupt(uint16_t addr);
+    uint8_t active_interrupt(uint8_t bit, uint16_t addr);
     uint8_t decode();
     uint8_t decodeExtendOpcode();
 
   private:
-    Registers mRegister;
-    RamBus &mRAM;
-    std::map<std::string, int> mRegisterIndex;
-    std::array<Reg8, 8> mMapReg;
+    Registers _registers;
+    RamBus &_ram;
+    std::map<std::string, int> _register_index;
+    std::array<Reg8, 8> _map_reg;
 };
 
 #endif
