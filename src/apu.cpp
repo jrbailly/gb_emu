@@ -245,6 +245,7 @@ auto APU::trigger_ch3() -> void
     int period = ((_ram[NR34] & 0x7) << 8) | _ram[NR33];
 
     _channels[2].increment = (65536.0 / (2048.0 - period)) / SAMPLERATE;
+    _channels[2].sweep_pace = 0;
     if (_ram[NR34] & 0x40)
         _channels[2].length_timer = _ram[NR31];
     switch ((_ram[NR32] >> 5) & 0x3)
@@ -312,7 +313,7 @@ auto APU::update_enveloppe() -> void
 
     for (int i = 0; i < 4; ++i)
     {
-        if (i != 2 && _channels[i].sweep_pace > 0 && (enveloppe_count % _channels[i].sweep_pace) == 0)
+        if (_channels[i].sweep_pace > 0 && (enveloppe_count % _channels[i].sweep_pace) == 0)
         {
             if (_channels[i].direction)
                 _channels[i].volume++;

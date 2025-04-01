@@ -17,16 +17,17 @@ struct Ram
 class RamBus
 {
   public:
-    RamBus();
+    RamBus(bool unittest = false);
+    auto clear() -> void;
     inline auto operator[](std::size_t i) const -> unsigned char
     {
         return _ram[i];
     }
-    inline auto write(int address, unsigned char value, bool callback = true) -> void
+    inline auto write(int address, unsigned char value) -> void
     {
-        if (address >= 0x8000)
+        if (address >= 0x8000 || _unittest)
             _ram[address] = value;
-        if (_write_callbacks[address] && callback)
+        if (_write_callbacks[address])
             _write_callbacks[address](*this, address, value);
     }
     inline auto write_register(int address, unsigned char value) -> void
@@ -44,6 +45,7 @@ class RamBus
     }
 
   private:
+    bool _unittest;
     std::array<unsigned char, Ram::ram_size> _ram;
     std::vector<ram_callback> _write_callbacks;
 };

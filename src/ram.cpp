@@ -7,9 +7,17 @@
  * @brief Construct a new RamBus object and fill the memory with '0'.
  *
  */
-RamBus::RamBus()
+RamBus::RamBus(bool unittest) : _unittest(unittest)
 {
     _write_callbacks.resize(0x10000);
+    clear();
+}
+
+/**
+ * @brief Clear memory, fill with '0'
+ */
+auto RamBus::clear() -> void
+{
     _ram.fill(0);
 }
 

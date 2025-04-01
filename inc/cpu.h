@@ -6,12 +6,14 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <map>
+
 static constexpr size_t OPCODE_SIZE = 0xFF;
 static constexpr int CPU_FREQ = 4194304;
 
 struct Registers
 {
-    unsigned char ie;
+    unsigned char ime;
     unsigned short pc;
     unsigned short sp;
     union {
@@ -29,6 +31,8 @@ class CPU
     uint8_t step();
     void save_state(const std::string &rom_file);
     void load_state(const std::string &rom_file);
+    void load_registers(const std::map<std::string, int> &registers_value);
+    std::map<std::string, int> get_registers();
 
   public:
     enum Register
@@ -119,6 +123,7 @@ class CPU
   private:
     Registers mRegister;
     RamBus &mRAM;
+    std::map<std::string, int> mRegisterIndex;
     std::array<Reg8, 8> mMapReg;
 };
 

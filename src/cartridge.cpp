@@ -7,7 +7,7 @@
  * @brief Construct a new Cartridge object
  *
  */
-Cartridge::Cartridge() : _upper_bank(0), _mode(0)
+Cartridge::Cartridge() : _mode(0), _bank(0), _upper_bank(0)
 {
 }
 
@@ -24,11 +24,12 @@ auto Cartridge::init(RamBus &ram) -> void
                                      std::to_string(_upper_bank + val));
         if (val == 0)
             val = 1;
-        ram.write_range(_rom[_upper_bank + val].begin(), BLOCK_SIZE, 0x4000);
+        _bank = val;
+        ram.write_range(_rom[_upper_bank + _bank].begin(), BLOCK_SIZE, 0x4000);
     });
     ram.register_callback_range(0x4000, 0x2000, [this](RamBus &ram, int addr, unsigned char val) {
-        if (_mode == 0)
-            _upper_bank = val << 5;
+        // if (_mode == 0)
+        //     _upper_bank = (val & 0x3) << 5;
     });
     ram.register_callback_range(0x6000, 0x2000, [this](RamBus &ram, int addr, unsigned char val) { _mode = val; });
 }

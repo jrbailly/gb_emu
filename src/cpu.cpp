@@ -43,7 +43,7 @@ constexpr std::array<uint16_t, 2048> intToBcd = [] {
 
 CPU::CPU(RamBus &ram) : mRAM(ram)
 {
-    mRegister.ie = 0;
+    mRegister.ime = 0;
     mRegister.pc = 0x100;
     mRegister.sp = 0xfffe;
     mMapReg = {Reg8::B, Reg8::C, Reg8::D, Reg8::E, Reg8::H, Reg8::L, Reg8::F, Reg8::A};
@@ -55,6 +55,8 @@ CPU::CPU(RamBus &ram) : mRAM(ram)
     mRegister.regs8[Reg8::E] = 0xd8;
     mRegister.regs8[Reg8::H] = 0x01;
     mRegister.regs8[Reg8::L] = 0x4d;
+    mRegisterIndex = {{"b", Reg8::B}, {"c", Reg8::C}, {"d", Reg8::D}, {"e", Reg8::E},
+                      {"h", Reg8::H}, {"l", Reg8::L}, {"f", Reg8::F}, {"a", Reg8::A}};
 }
 
 void CPU::debug(uint32_t cycles)
@@ -88,7 +90,7 @@ uint8_t CPU::step()
 {
     int8_t cycles_count = 0;
 
-    if (mRegister.ie == 1)
+    if (mRegister.ime == 1)
     {
         uint8_t activeInterrupt = mRAM[Register::IE] & mRAM[Register::IF];
 
@@ -135,6 +137,33 @@ void CPU::load_state(const std::string &rom_file)
         if (bytesRead == Ram::ram_size)
             mRAM.write_range(block.data(), Ram::ram_size, 0);
     }
+}
+
+void CPU::load_registers(const std::map<std::string, int> &registers_value)
+{
+    for (auto &item : registers_value)
+    {
+        if (mRegisterIndex.find(item.first) != mRegisterIndex.end())
+            mRegister.regs8[mRegisterIndex[item.first]] = item.second;
+        else if (item.first == "pc")
+            mRegister.pc = item.second;
+        else if (item.first == "sp")
+            mRegister.sp = item.second;
+        else if (item.first == "ime")
+            mRegister.ime = item.second;
+    }
+}
+
+std::map<std::string, int> CPU::get_registers()
+{
+    std::map<std::string, int> output;
+
+    for (auto &reg : mRegisterIndex)
+        output[reg.first] = mRegister.regs8[reg.second];
+    output["pc"] = mRegister.pc;
+    output["sp"] = mRegister.sp;
+    output["ime"] = mRegister.ime;
+    return (output);
 }
 
 uint8_t CPU::decode()
@@ -1462,12 +1491,12 @@ inline void CPU::STOP()
 
 inline void CPU::di()
 {
-    mRegister.ie = 0;
+    mRegister.ime = 0;
 }
 
 inline void CPU::ei()
 {
-    mRegister.ie = 1;
+    mRegister.ime = 1;
 }
 
 inline void CPU::nop()
