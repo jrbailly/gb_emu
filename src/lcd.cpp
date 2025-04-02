@@ -13,7 +13,7 @@
  */
 LCD::LCD(RamBus &ram) : _ram(ram), _scale(1)
 {
-    _next_line_cycle = cycles_per_line;
+    _current_mode = Mode::MODE2;
     _colors[GrayLevel::TRANSPARENT] = 0x0;
     _colors[GrayLevel::LIGHT_GRAY] = 0xA0A0A0FF;
     _colors[GrayLevel::DARK_GRAY] = 0x585858FF;
@@ -30,8 +30,16 @@ LCD::LCD(RamBus &ram) : _ram(ram), _scale(1)
     _reload_surface = true;
     _reload_sprite = true;
     _reload_background = true;
+    _mode_cyles[Mode::MODE2] = cycles_mode2;
+    _mode_cyles[Mode::MODE3] = cycles_mode3;
+    _mode_cyles[Mode::MODE0] = cycles_mode0;
+    _mode_cyles[Mode::MODE1] = cycles_per_line;
+    _mode_cyles[Mode::RENDER] = 0;
+    _next_op_cycle = 0;
     _background_change.fill(0);
     _sprite_change.fill(0);
+    _total_cycle = 0;
+    _ram.write_register(Register::LY, max_lines - 1);
 }
 
 /**
@@ -101,20 +109,19 @@ auto LCD::destroy_window() -> void
  */
 auto LCD::init(RamBus &ram) -> void
 {
-    ram.register_callback(Register::BGP, [this](RamBus &ram, int addr, unsigned char val) { this->update_BGP0(); });
-    ram.register_callback(Register::OBP0, [this](RamBus &ram, int addr, unsigned char val) { this->update_OBP0(); });
-    ram.register_callback(Register::OBP1, [this](RamBus &ram, int addr, unsigned char val) { this->update_OBP1(); });
-    ram.register_callback(Register::DMA, [this](RamBus &ram, int addr, unsigned char val) {
+    ram.register_callback(Register::BGP, [this](RamBus &, int, unsigned char) { this->update_BGP0(); });
+    ram.register_callback(Register::OBP0, [this](RamBus &, int, unsigned char) { this->update_OBP0(); });
+    ram.register_callback(Register::OBP1, [this](RamBus &, int, unsigned char) { this->update_OBP1(); });
+    ram.register_callback(Register::DMA, [](RamBus &ram, int, unsigned char val) {
         int start_address = val << 8;
-        ram.write_range(ram.data() + start_address, oam_size, Register::OAM);
+        ram.write_range(start_address, Register::OAM, oam_size);
     });
-    ram.register_callback_range(TilesAddress::BLOCK0, tiles_memory_size,
-                                [this](RamBus &ram, int addr, unsigned char val) {
-                                    int index = (addr - TilesAddress::BLOCK0) / (2 * tiles_width);
-                                    _background_change[index] = 1;
-                                    _sprite_change[index] = 1;
-                                    _reload_surface = true;
-                                });
+    ram.register_callback_range(TilesAddress::BLOCK0, tiles_memory_size, [this](RamBus &, int addr, unsigned char) {
+        int index = (addr - TilesAddress::BLOCK0) / (2 * tiles_width);
+        _background_change[index] = 1;
+        _sprite_change[index] = 1;
+        _reload_surface = true;
+    });
     create_window();
 }
 
@@ -127,21 +134,45 @@ auto LCD::init(RamBus &ram) -> void
  */
 auto LCD::step(int cycles_count) -> void
 {
-    unsigned char interrupt;
+    unsigned char ly;
 
-    _next_line_cycle -= cycles_count;
-    if (_next_line_cycle <= 0)
+    _total_cycle += cycles_count;
+    _next_op_cycle -= cycles_count;
+    if (_next_op_cycle <= 0)
     {
-        unsigned char ly = (_ram[Register::LY] + 1) % max_lines;
-
-        interrupt = _ram[CPU::Register::IF];
-        _ram.write_register(Register::LY, ly);
-        _next_line_cycle += cycles_per_line;
-        // vblank
-        if (ly == 144)
-            _ram.write_register(CPU::Register::IF, interrupt | 0x1);
+        ly = _ram[Register::LY];
+        _next_op_cycle += _mode_cyles[_current_mode];
+        if (_current_mode == Mode::MODE2 || _current_mode == Mode::MODE1)
+        {
+            ly = (ly + 1) % max_lines;
+            _ram.write(Register::LY, ly);
+        }
+        switch (_current_mode)
+        {
+        case Mode::MODE2:
+            _current_mode = Mode::MODE3;
+            break;
+        case Mode::MODE3:
+            scanline();
+            _current_mode = Mode::MODE0;
+            break;
+        case Mode::MODE0:
+            if (ly < screen_height)
+                _current_mode = Mode::MODE2;
+            else
+                _current_mode = Mode::MODE1;
+            break;
+        case Mode::MODE1:
+            if (ly + 1 < max_lines)
+                _current_mode = Mode::MODE1;
+            else
+                _current_mode = Mode::RENDER;
+            break;
+        case Mode::RENDER:
+            renderer();
+            _current_mode = Mode::MODE2;
+        }
         update_stat();
-        scanline();
     }
 }
 
@@ -162,6 +193,8 @@ auto LCD::renderer() -> void
         if (!SDL_RenderClear(_renderer))
             throw std::runtime_error(std::format("SDL_RenderClear : {}", SDL_GetError()));
     }
+    _next_op_cycle = 0;
+    _total_cycle = 0;
 }
 
 /**
@@ -215,18 +248,21 @@ auto LCD::scanline() -> void
  */
 auto LCD::update_stat() -> void
 {
-    unsigned char stat = _ram[Register::STAT] & 0xF8;
+    unsigned char stat = _ram[Register::STAT];
     unsigned char ly = _ram[Register::LY];
     unsigned char lyc = _ram[Register::LYC];
     unsigned char interrupt = _ram[CPU::Register::IF];
 
-    if (ly >= 144)
-        stat |= 0x1;
-    else
-        stat |= 0x0;
+    if (ly == screen_height)
+        interrupt |= 0x1;
+    stat = (stat & 0xFC) | _current_mode;
     if (ly == lyc)
         stat |= LYC_LY;
-    if ((stat & MODE1_INT) && (ly == 144))
+    if ((stat & MODE0_INT) && _current_mode == Mode::MODE0)
+        interrupt |= 0x2;
+    if ((stat & MODE1_INT) && _current_mode == Mode::MODE1)
+        interrupt |= 0x2;
+    if ((stat & MODE2_INT) && _current_mode == Mode::MODE2)
         interrupt |= 0x2;
     if ((stat & LYC_INT) && (ly == lyc))
         interrupt |= 0x2;
@@ -303,7 +339,8 @@ auto LCD::update_OBP1() -> void
 auto LCD::load_surface_sprites() -> void
 {
     uint32_t *datas;
-    int address = TilesAddress::BLOCK0;
+    int address;
+    int tile_index = 0;
     int pitch;
     unsigned char value;
     SDL_Rect rect{0, 0, line_width, 2 * tiles_height};
@@ -314,18 +351,20 @@ auto LCD::load_surface_sprites() -> void
     {
         if (_sprite_change[i] != 0 || _reload_sprite)
         {
+            address = TilesAddress::BLOCK0 + (i * tiles_width * 2);
             for (int j = 0; j < tiles_height; ++j)
             {
                 for (int k = 0; k < 8; k++)
                 {
                     value = ((_ram[address] >> (7 - k)) & 1) | (((_ram[address + 1] >> (7 - k)) & 1) << 1);
-                    datas[(j * line_width) + (i * tiles_width) + k] = _OBP0[value];
-                    datas[((j + tiles_height) * line_width) + (i * tiles_width) + k] = _OBP1[value];
+                    datas[(j * line_width) + tile_index + k] = _OBP0[value];
+                    datas[((j + tiles_height) * line_width) + tile_index + k] = _OBP1[value];
                 }
                 address += 2;
             }
         }
         _sprite_change[i] = 0;
+        tile_index += tiles_width;
     }
     SDL_UnlockTexture(_texture_sprites);
 }
@@ -339,6 +378,7 @@ auto LCD::load_surface_background() -> void
 {
     uint32_t *datas = nullptr;
     int address = TilesAddress::BLOCK0;
+    int tile_index = 0;
     int pitch = 0;
     unsigned char value;
     SDL_Rect rect{0, 0, line_width, tiles_height};
@@ -349,16 +389,19 @@ auto LCD::load_surface_background() -> void
     {
         if (_background_change[i] != 0 || _reload_background)
         {
+            address = TilesAddress::BLOCK0 + (i * tiles_width * 2);
             for (int line = 0; line < tiles_height; ++line)
             {
                 for (int k = 0; k < 8; k++)
                 {
                     value = ((_ram[address] >> (7 - k)) & 1) | (((_ram[address + 1] >> (7 - k)) & 1) << 1);
-                    datas[(line * line_width) + (i * tiles_width) + k] = _BGP0[value];
+                    datas[(line * line_width) + tile_index + k] = _BGP0[value];
                 }
                 address += 2;
             }
         }
+        _background_change[i] = 0;
+        tile_index += tiles_width;
     }
     SDL_UnlockTexture(_texture_background);
 }

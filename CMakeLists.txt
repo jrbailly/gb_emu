@@ -11,6 +11,7 @@ file(GLOB_RECURSE SRCS src/*.cpp)
 include_directories ("inc")
 add_executable(gb_emu ${SRCS})
 target_link_libraries(gb_emu PRIVATE SDL3::SDL3 nlohmann_json::nlohmann_json)
+target_compile_options(gb_emu PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 
 file(GLOB_RECURSE SRCS_TEST src/cpu.cpp src/ram.cpp tests/*.cpp)

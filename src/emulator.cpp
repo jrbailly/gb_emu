@@ -12,9 +12,9 @@
  * @param configuration Configuration
  */
 Emulator::Emulator(const Config &configuration)
-    : _ram(), _cpu(std::make_unique<CPU>(_ram)), _lcd(std::make_unique<LCD>(_ram)),
-      _controllers(std::make_unique<Controllers>()), _timer(std::make_unique<Timer>()),
-      _apu(std::make_unique<APU>(_ram)), _cartridge(std::make_unique<Cartridge>()), _config(configuration)
+    : _ram(), _apu(std::make_unique<APU>(_ram)), _cartridge(std::make_unique<Cartridge>()),
+      _controllers(std::make_unique<Controllers>()), _cpu(std::make_unique<CPU>(_ram)),
+      _lcd(std::make_unique<LCD>(_ram)), _timer(std::make_unique<Timer>()), _config(configuration)
 {
 }
 
@@ -46,7 +46,6 @@ auto Emulator::loop() -> void
 {
     uint32_t cycles = 0;
     uint32_t cycles_count = 0;
-    uint16_t last_addr;
 
     while (true)
     {
@@ -60,12 +59,11 @@ auto Emulator::loop() -> void
         {
             //_cpu->debug(cycles_count);
             cycles = _cpu->step();
+            cycles_count += cycles;
             _lcd->step(cycles);
             _apu->step(cycles);
             _timer->step(_ram, cycles);
-            cycles_count += cycles;
         }
-        _lcd->renderer();
         _apu->flush();
         auto end_time = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();

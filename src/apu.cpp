@@ -41,35 +41,35 @@ auto APU::init_sdl() -> void
  */
 auto APU::init(RamBus &ram) -> void
 {
-    ram.register_callback(Register::NR14, [this](RamBus &ram, int addr, unsigned char val) {
+    ram.register_callback(Register::NR14, [this](RamBus &, int, unsigned char val) {
         if (val & 0x80)
         {
             trigger(0);
             trigger_ch1();
         }
     });
-    ram.register_callback(Register::NR24, [this](RamBus &ram, int addr, unsigned char val) {
+    ram.register_callback(Register::NR24, [this](RamBus &, int, unsigned char val) {
         if (val & 0x80)
         {
             trigger(1);
             trigger_ch2();
         }
     });
-    ram.register_callback(Register::NR34, [this](RamBus &ram, int addr, unsigned char val) {
+    ram.register_callback(Register::NR34, [this](RamBus &, int, unsigned char val) {
         if (val & 0x80)
         {
             trigger(2);
             trigger_ch3();
         }
     });
-    ram.register_callback(Register::NR44, [this](RamBus &ram, int addr, unsigned char val) {
+    ram.register_callback(Register::NR44, [this](RamBus &, int, unsigned char val) {
         if (val & 0x80)
         {
             trigger(3);
             trigger_ch4();
         }
     });
-    ram.register_callback(Register::NR30, [this](RamBus &ram, int addr, unsigned char val) {
+    ram.register_callback(Register::NR30, [](RamBus &ram, int, unsigned char val) {
         if ((val & 0x80) == 0)
             ram.write_register(NR52, ram[NR52] & ~(1 << 3));
     });

@@ -34,15 +34,12 @@ class RamBus
     {
         _ram[address] = value;
     }
-    auto write_range(const unsigned char *datas, int size, int address) -> void;
+    auto write_range(const unsigned char *datas, size_t size, unsigned int address) -> void;
+    auto write_range(unsigned int start_address, unsigned int dst_address, size_t size) -> void;
     auto load_ram(const std::string &romfile) -> void;
     auto save_ram(const std::string &romfile) -> void;
     auto register_callback(int address, ram_callback fnc) -> void;
-    auto register_callback_range(int start_address, unsigned int size, ram_callback fnc) -> void;
-    const auto data() const
-    {
-        return _ram.data();
-    }
+    auto register_callback_range(int start_address, size_t size, ram_callback fnc) -> void;
     const std::array<unsigned char, Ram::ram_size> getDatas() const
     {
         return _ram;

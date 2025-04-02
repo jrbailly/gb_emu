@@ -1,18 +1,18 @@
-## Emulateur gameboy
-Cet émulateur est conçu pour reproduire le fonctionnement des consoles GameBoy originales.
+## GameBoy Emulator
+This emulator is designed to replicate the functionality of the original GameBoy consoles.
 
-Il ne gère actuellement que les modèles DMG (Dot Matrix Game) et les cartouches MBC1 (Memory Bank Controller 1).
+It currently supports only the DMG (Dot Matrix Game) models and MBC1 (Memory Bank Controller 1) cartridges.
 
-Le projet est en cours de développement et vise à offrir une expérience authentique de jeu rétro.
+The project is under development and aims to provide an authentic retro gaming experience.
 
-### Répertoires
-- docs : Contient la documentation du projet.
-- inc : Fichiers d'en-tête (headers).
-- src : Fichiers source en C++.
-- tests : Inclut les tests unitaires.
+### Keybinding
+- A = Left ctrl
+- B = Left alt
+- start = Enter
+- select = Backspace
 
-### Dépendances
-Pour compiler ce projet, assurez-vous d'avoir les outils et bibliothèques suivants installés sur votre système :
+### Dependencies
+To compile this project, ensure you have the following tools and libraries installed on your system:
 - gcc ou clang
 - SDL3
 - nlohmann_json
@@ -28,11 +28,10 @@ Pour compiler ce projet, assurez-vous d'avoir les outils et bibliothèques suiva
     make
 
 ## Tests unitaires
-Json de tests créés à partir du projet https://github.com/raddad772/jsmoo.git .
+Test JSON files created from the project https://github.com/raddad772/jsmoo.git .
 
-## État du projet
-Ce projet est actuellement en cours de développement.
-Fonctionnalités envisagées pour les futures versions :
-- Support d'autres types de cartouches (MBC2, MBC3, etc.).
-- Émulation de la GameBoy Color.
-- Ajout d'une interface graphique.
+## Project Status
+This project is currently under development. Features envisioned for future versions include:
+- Support for other cartridge types (MBC2, MBC3, etc.).
+- Emulation of the GameBoy Color.
+- Addition of a graphical user interface.

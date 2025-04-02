@@ -15,6 +15,9 @@ static constexpr int max_tiles = 512;
 static constexpr int line_width = max_tiles * tiles_width;
 static constexpr int oam_size = 160;
 static constexpr int tiles_memory_size = 0x1800;
+static constexpr int cycles_mode2 = 80;
+static constexpr int cycles_mode3 = 172;
+static constexpr int cycles_mode0 = 204;
 static constexpr int cycles_per_line = 456;
 static constexpr int max_lines = 154;
 static constexpr int frame_cycle_count = cycles_per_line * max_lines;
@@ -60,7 +63,7 @@ class LCD
         WIN_TILE_AREA = 0x40,
         LCD_ENABLE = 0x80
     };
-    enum LCDStatus
+    enum Status
     {
         LYC_LY = 0x4,
         MODE0_INT = 0x8,
@@ -74,6 +77,14 @@ class LCD
         X_FLIP = 0x20,
         Y_FLIP = 0x40,
         PRIORITY = 0x80,
+    };
+    enum Mode
+    {
+        MODE0 = 0,
+        MODE1,
+        MODE2,
+        MODE3,
+        RENDER,
     };
     enum GrayLevel
     {
@@ -107,7 +118,9 @@ class LCD
   private:
     RamBus &_ram;
     int _scale;
-    int _next_line_cycle;
+    int _next_op_cycle;
+    int _total_cycle;
+    Mode _current_mode;
     SDL_Window *_window;
     SDL_Renderer *_renderer;
     SDL_Texture *_texture_sprites;
@@ -119,6 +132,7 @@ class LCD
     bool _reload_surface;
     bool _reload_sprite;
     bool _reload_background;
+    std::array<int, 4> _mode_cyles;
     std::array<int, max_tiles> _background_change;
     std::array<int, max_tiles> _sprite_change;
 };

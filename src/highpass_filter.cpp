@@ -24,7 +24,7 @@ auto HighpassFilter::filter(int16_t *buffer, int size, int step) -> void
     int i;
     float out = 0;
 
-    for (int j = 0; j < size; j += 2)
+    for (int j = 0; j < size; j += step)
     {
         float value = buffer[j];
         out = 0;

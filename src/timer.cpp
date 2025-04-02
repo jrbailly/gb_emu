@@ -20,7 +20,7 @@ Timer::Timer() : _next_cycle_div(0), _next_cycle_tima(0), _cycle_tima(0)
  **/
 auto Timer::init(RamBus &ram) -> void
 {
-    ram.register_callback(Register::TAC, [this](RamBus &ram, int addr, unsigned char val) {
+    ram.register_callback(Register::TAC, [this](RamBus &, int, unsigned char val) {
         int clock = val & 0x3;
 
         if (val & 0x4)
@@ -34,8 +34,7 @@ auto Timer::init(RamBus &ram) -> void
             _next_cycle_tima = -1;
         }
     });
-    ram.register_callback(Register::DIV,
-                          [this](RamBus &ram, int addr, unsigned char val) { ram.write_register(Register::DIV, 0); });
+    ram.register_callback(Register::DIV, [](RamBus &ram, int, unsigned char) { ram.write_register(Register::DIV, 0); });
 }
 
 /**

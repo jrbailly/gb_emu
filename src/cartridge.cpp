@@ -18,7 +18,7 @@ Cartridge::Cartridge() : _mode(0), _bank(0), _upper_bank(0)
  */
 auto Cartridge::init(RamBus &ram) -> void
 {
-    ram.register_callback_range(0x2000, 0x4000, [this](RamBus &ram, int addr, unsigned char val) {
+    ram.register_callback_range(0x2000, 0x4000, [this](RamBus &ram, int, unsigned char val) {
         if (_upper_bank + val > _rom.size())
             throw std::runtime_error(std::format("Cartridge::init invalid bank : ") +
                                      std::to_string(_upper_bank + val));
@@ -27,11 +27,11 @@ auto Cartridge::init(RamBus &ram) -> void
         _bank = val;
         ram.write_range(_rom[_upper_bank + _bank].begin(), BLOCK_SIZE, 0x4000);
     });
-    ram.register_callback_range(0x4000, 0x2000, [this](RamBus &ram, int addr, unsigned char val) {
+    ram.register_callback_range(0x4000, 0x2000, [](RamBus &, int, unsigned char) {
         // if (_mode == 0)
         //     _upper_bank = (val & 0x3) << 5;
     });
-    ram.register_callback_range(0x6000, 0x2000, [this](RamBus &ram, int addr, unsigned char val) { _mode = val; });
+    ram.register_callback_range(0x6000, 0x2000, [this](RamBus &, int, unsigned char val) { _mode = val; });
 }
 
 /**

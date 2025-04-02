@@ -30,15 +30,15 @@ bool ParseCommandLine(int argc, char **argv, Config &config)
     return (Valid);
 }
 
-int main(int argc, char **argv)
+int main(int, char **)
 {
     Config Configuration;
     Application App;
 
-    // if (ParseCommandLine(argc, argv, Configuration))
+    //    if (ParseCommandLine(argc, argv, Configuration))
     // Configuration.mRomFile = "/media/data/workspace/gb_emu/Mario's Picross (USA, Europe) (SGB Enhanced).gb";
     // Configuration.mRomFile = "/media/data/workspace/gb_emu/cpu_instrs.gb";
-    Configuration.mRomFile = "/media/data/workspace/gb_emu/Legend of Zelda, The - Link's Awakening (France).gb";
+    Configuration.mRomFile = "/media/data/workspace/gb_emu/Super Mario Land (World).gb";
     // Configuration.mRomFile = "d:\\workspace\\gb_emu\\sound.gb";
     {
         try

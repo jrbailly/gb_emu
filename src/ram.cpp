@@ -28,11 +28,25 @@ auto RamBus::clear() -> void
  * @param size Size to copy
  * @param address Destination address
  */
-auto RamBus::write_range(const unsigned char *datas, int size, int address) -> void
+auto RamBus::write_range(const unsigned char *datas, size_t size, unsigned int address) -> void
 {
     if (address + size > Ram::ram_size)
         throw std::runtime_error(std::format("RamBus::write_range invalid size : ") + std::to_string(size));
     std::copy(datas, datas + size, _ram.begin() + address);
+}
+
+/**
+ * @brief Write a memory range in ram
+ *
+ * @param start_address Source address
+ * @param dst_address Destination address to copy
+ * @param size Copy size
+ */
+auto RamBus::write_range(unsigned int start_address, unsigned int dst_address, size_t size) -> void
+{
+    if (dst_address + size > Ram::ram_size)
+        throw std::runtime_error(std::format("RamBus::write_range invalid size : ") + std::to_string(size));
+    std::copy(_ram.begin() + start_address, _ram.begin() + start_address + size, _ram.begin() + dst_address);
 }
 
 /**
@@ -65,7 +79,6 @@ auto RamBus::save_ram(const std::string &rom_file) -> void
 {
     std::string filename = rom_file + ".ram";
     std::ofstream output(filename.data(), std::ios::binary);
-    std::streamsize bytesRead;
 
     if (output)
         output.write(reinterpret_cast<char *>(&_ram[ROM_RAM_ADDRESS]), ROM_RAM_SIZE);
@@ -89,8 +102,8 @@ auto RamBus::register_callback(int address, ram_callback fnc) -> void
  * @param size Range length
  * @param fnc Callback function
  */
-auto RamBus::register_callback_range(int start_address, unsigned int size, ram_callback fnc) -> void
+auto RamBus::register_callback_range(int start_address, size_t size, ram_callback fnc) -> void
 {
-    for (int i = 0; i < size; ++i)
+    for (size_t i = 0; i < size; ++i)
         _write_callbacks[start_address + i] = fnc;
 }

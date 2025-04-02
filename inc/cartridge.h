@@ -19,8 +19,8 @@ class Cartridge
 
   private:
     int _mode;
-    int _bank;
-    int _upper_bank;
+    size_t _bank;
+    size_t _upper_bank;
     std::vector<std::array<unsigned char, BLOCK_SIZE>> _rom;
 };
 

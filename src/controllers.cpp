@@ -6,7 +6,7 @@ Controllers::Controllers() : mDpads(0xf), mButtons(0xf)
 
 auto Controllers::init(RamBus &ram) -> void
 {
-    ram.register_callback(Register::JOYP, [this](RamBus &ram, int addr, unsigned char val) {
+    ram.register_callback(Register::JOYP, [this](RamBus &ram, int, unsigned char val) {
         uint8_t value = val & 0x30;
 
         if (value & 0x20 && mDpads != 0xF)

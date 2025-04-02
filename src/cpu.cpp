@@ -102,17 +102,12 @@ void CPU::debug(uint32_t cycles)
 uint8_t CPU::step()
 {
     int8_t cycles_count = 1;
-    uint8_t interrupts;
 
-    if (_registers.halt)
-    {
-        interrupts = _ram[Register::IF];
-        if (interrupts)
-            _registers.halt = false;
-    }
+    if (_registers.halt && _ram[Register::IF])
+        _registers.halt = 0;
     if (_registers.ime == 1)
     {
-        interrupts = _ram[Register::IE] & _ram[Register::IF];
+        uint8_t interrupts = _ram[Register::IE] & _ram[Register::IF];
         if (interrupts & 0x1)
             cycles_count = active_interrupt(0x1, InterruptAddress::VBLANK);
         else if (interrupts & 0x2)
