@@ -56,7 +56,7 @@ auto Emulator::loop() -> void
             return;
         while (cycles_count < frame_cycle_count)
         {
-            //_cpu->debug(cycles_count);
+            //  _cpu->debug(cycles_count);
             cycles = _cpu->step();
             cycles_count += cycles;
             _lcd->step(cycles);
@@ -116,6 +116,7 @@ auto Emulator::save_state() -> void
 
     if (!file.is_open())
         throw std::runtime_error(std::format("cannot open file : {}", filename));
+
     state["cpu"] = _cpu->get_registers();
     state["ram"] = _ram.getDatas();
     if (file)
@@ -140,5 +141,6 @@ auto Emulator::load_state() -> void
     for (auto &value : state["ram"])
         _ram.write_register(address++, value.get<unsigned char>());
 
+    _apu->load_state();
     _lcd->load_state();
 }

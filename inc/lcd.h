@@ -127,7 +127,7 @@ class LCD
     SDL_Renderer *_renderer;
     SDL_Texture *_texture_sprites;
     SDL_Texture *_texture_background;
-    SDL_Texture *_texture_viewer;
+    // SDL_Texture *_texture_viewer;
     unsigned int _BGP0[4];
     unsigned int _OBP0[4];
     unsigned int _OBP1[4];
@@ -135,7 +135,7 @@ class LCD
     bool _reload_surface;
     bool _reload_sprite;
     bool _reload_background;
-    std::array<int, 4> _mode_cyles;
+    std::array<int, 5> _mode_cyles;
     std::array<int, max_tiles> _background_change;
     std::array<int, max_tiles> _sprite_change;
 };

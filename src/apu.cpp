@@ -16,6 +16,14 @@ APU::APU(RamBus &ram) : _ram(ram)
     _duty_cycles[1] = 0.25;
     _duty_cycles[2] = 0.5;
     _duty_cycles[3] = 0.75;
+    _channels[0].process = std::bind(&APU::process_ch1, this);
+    _channels[1].process = std::bind(&APU::process_ch2, this);
+    _channels[2].process = std::bind(&APU::process_ch3, this);
+    _channels[3].process = std::bind(&APU::process_ch4, this);
+    _channels[0].trigger = std::bind(&APU::trigger_ch1, this);
+    _channels[1].trigger = std::bind(&APU::trigger_ch2, this);
+    _channels[2].trigger = std::bind(&APU::trigger_ch3, this);
+    _channels[3].trigger = std::bind(&APU::trigger_ch4, this);
 }
 
 /**
@@ -41,34 +49,15 @@ auto APU::init_sdl() -> void
  */
 auto APU::init(RamBus &ram) -> void
 {
-    ram.register_callback(Register::NR14, [this](RamBus &, int, unsigned char val) {
-        if (val & 0x80)
-        {
-            trigger(0);
-            trigger_ch1();
-        }
-    });
-    ram.register_callback(Register::NR24, [this](RamBus &, int, unsigned char val) {
-        if (val & 0x80)
-        {
-            trigger(1);
-            trigger_ch2();
-        }
-    });
-    ram.register_callback(Register::NR34, [this](RamBus &, int, unsigned char val) {
-        if (val & 0x80)
-        {
-            trigger(2);
-            trigger_ch3();
-        }
-    });
-    ram.register_callback(Register::NR44, [this](RamBus &, int, unsigned char val) {
-        if (val & 0x80)
-        {
-            trigger(3);
-            trigger_ch4();
-        }
-    });
+    int reg = Register::NR14;
+    for (int i = 0; i < 4; ++i)
+    {
+        ram.register_callback(reg, [this, i](RamBus &, int, unsigned char val) {
+            if (val & 0x80)
+                trigger(i);
+        });
+        reg += 0x05;
+    }
     ram.register_callback(Register::NR30, [](RamBus &ram, int, unsigned char val) {
         if ((val & 0x80) == 0)
             ram.write_register(NR52, ram[NR52] & ~(1 << 3));
@@ -87,16 +76,9 @@ auto APU::step(uint32_t cycles_count) -> void
     if (_next_cycle <= 0)
     {
         if (_ram[NR52] & 0x80)
-        {
-            if (_ram[NR52] & 0x1)
-                process_ch1();
-            if (_ram[NR52] & 0x2)
-                process_ch2();
-            if (_ram[NR52] & 0x4)
-                process_ch3();
-            if (_ram[NR52] & 0x8)
-                process_ch4();
-        }
+            for (int i = 0; i < 4; ++i)
+                if (_ram[NR52] & (1 << i))
+                    _channels[i].process();
         mixer();
         _next_cycle += SAMPLE_PERIOD;
     }
@@ -121,6 +103,22 @@ auto APU::flush() -> void
     if (!SDL_PutAudioStreamData(_audio_stream, _buffer.data(), _buffer_index * sizeof(int16_t)))
         throw std::runtime_error(std::format("SDL_PutAudioStreamData : {}", SDL_GetError()));
     _buffer_index = 0;
+}
+
+/**
+ * @brief Reload channels , trigger if needed
+ *
+ */
+auto APU::load_state() -> void
+{
+    int reg = Register::NR14;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        if (_ram[reg] & 0x80)
+            trigger(i);
+        reg += 0x05;
+    }
 }
 
 /**
@@ -213,6 +211,7 @@ auto APU::trigger(int channel) -> void
     _channels[channel].volume = _ram[reg_channel_space + NR12] >> 4;
     if (_ram[reg_channel_space + NR14] & 0x40)
         _channels[channel].length_timer = _ram[reg_channel_space + NR11] & 0x3F;
+    _channels[channel].trigger();
 }
 
 /**

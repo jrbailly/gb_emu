@@ -25,6 +25,8 @@ struct Channel
     int direction = 0;
     int volume = 0;
     int16_t value = 0;
+    std::function<void()> trigger;
+    std::function<void()> process;
 };
 
 class APU
@@ -59,6 +61,7 @@ class APU
     auto init(RamBus &ram) -> void;
     auto step(uint32_t cycles_count) -> void;
     auto flush() -> void;
+    auto load_state() -> void;
 
   private:
     auto init_sdl() -> void;

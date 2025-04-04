@@ -68,31 +68,37 @@ CPU::CPU(RamBus &ram) : _ram(ram)
  * @brief Outputs debug information about the CPU state.
  * @param cycles Number of executed cycles.
  */
-void CPU::debug(uint32_t cycles)
+void CPU::debug(uint32_t)
 {
-    // #ifdef A
-    FILE *f = /*stdout; */ fopen("log", "a+");
-    fprintf(f, "A:%2X F:", _registers.regs8[Reg8::A]);
-    if (_registers.regs8[Reg8::F] & 0x80)
-        fprintf(f, "Z");
-    else
-        fprintf(f, "-");
-    if (_registers.regs8[Reg8::F] & 0x40)
-        fprintf(f, "N");
-    else
-        fprintf(f, "-");
-    if (_registers.regs8[Reg8::F] & 0x20)
-        fprintf(f, "H");
-    else
-        fprintf(f, "-");
-    if (_registers.regs8[Reg8::F] & 0x10)
-        fprintf(f, "C");
-    else
-        fprintf(f, "-");
-    fprintf(f, " BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x  IF:%02X (cy: %d)\n", _registers.regs16[Reg16::BC],
-            _registers.regs16[Reg16::DE], _registers.regs16[Reg16::HL], _registers.sp, _registers.pc, _ram[IF], cycles);
-    fclose(f);
-    // #endif
+#ifdef A
+    if (_registers.halt == 0)
+    {
+        // #ifdef A
+        FILE *f = nullptr;
+        /*stdout; */ fopen_s(&f, "log", "a+");
+        fprintf(f, "A:%2X F:", _registers.regs8[Reg8::A]);
+        if (_registers.regs8[Reg8::F] & 0x80)
+            fprintf(f, "Z");
+        else
+            fprintf(f, "-");
+        if (_registers.regs8[Reg8::F] & 0x40)
+            fprintf(f, "N");
+        else
+            fprintf(f, "-");
+        if (_registers.regs8[Reg8::F] & 0x20)
+            fprintf(f, "H");
+        else
+            fprintf(f, "-");
+        if (_registers.regs8[Reg8::F] & 0x10)
+            fprintf(f, "C");
+        else
+            fprintf(f, "-");
+        fprintf(f, " BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x (cy: %d)\n", _registers.regs16[Reg16::BC],
+                _registers.regs16[Reg16::DE], _registers.regs16[Reg16::HL], _registers.sp, _registers.pc, cycles);
+        fclose(f);
+        // #endif
+    }
+#endif
 }
 
 /**
@@ -101,7 +107,7 @@ void CPU::debug(uint32_t cycles)
  */
 uint8_t CPU::step()
 {
-    int8_t cycles_count = 1;
+    int8_t cycles_count = 0;
 
     if (_registers.halt && _ram[Register::IF])
         _registers.halt = 0;
@@ -121,7 +127,9 @@ uint8_t CPU::step()
     }
     if (!_registers.halt)
         cycles_count += decode();
-    return (cycles_count);
+    else
+        cycles_count = 1;
+    return (cycles_count * MACHINE_CYCLE);
 }
 
 /**
@@ -131,18 +139,12 @@ uint8_t CPU::step()
 void CPU::load_registers(const std::map<std::string, int> &registers_value)
 {
     for (auto &item : registers_value)
-    {
         if (_register_index.find(item.first) != _register_index.end())
             _registers.regs8[_register_index[item.first]] = item.second;
-        else if (item.first == "pc")
-            _registers.pc = item.second;
-        else if (item.first == "sp")
-            _registers.sp = item.second;
-        else if (item.first == "ime")
-            _registers.ime = item.second;
-        else if (item.first == "hlt")
-            _registers.halt = item.second;
-    }
+    _registers.pc = registers_value.at("pc");
+    _registers.sp = registers_value.at("sp");
+    _registers.ime = registers_value.at("ime");
+    _registers.halt = registers_value.at("hlt");
 }
 
 /**

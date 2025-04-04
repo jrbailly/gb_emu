@@ -25,7 +25,7 @@ auto Cartridge::init(RamBus &ram) -> void
         if (val == 0)
             val = 1;
         _bank = val;
-        ram.write_range(_rom[_upper_bank + _bank].begin(), BLOCK_SIZE, 0x4000);
+        ram.write_range(_rom[_upper_bank + _bank].data(), BLOCK_SIZE, 0x4000);
     });
     ram.register_callback_range(0x4000, 0x2000, [](RamBus &, int, unsigned char) {
         // if (_mode == 0)
@@ -65,7 +65,7 @@ auto Cartridge::read_rom(const std::string_view filename) -> void
 auto Cartridge::load_rom(RamBus &ram) -> void
 {
     if (_rom.size() > 0)
-        ram.write_range(_rom[0].begin(), BLOCK_SIZE, 0x0);
+        ram.write_range(_rom[0].data(), BLOCK_SIZE, 0x0);
     if (_rom.size() > 1)
-        ram.write_range(_rom[1].begin(), BLOCK_SIZE, BLOCK_SIZE);
+        ram.write_range(_rom[1].data(), BLOCK_SIZE, BLOCK_SIZE);
 }
