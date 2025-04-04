@@ -98,10 +98,11 @@ class LCD
     virtual ~LCD();
     auto init(RamBus &ram) -> void;
     auto step(int cycles_count) -> void;
-    auto renderer() -> void;
     auto set_scale(int scale) -> void;
+    auto load_state() -> void;
 
   private:
+    auto renderer() -> void;
     auto create_window() -> void;
     auto destroy_window() -> void;
     auto scanline() -> void;
@@ -109,11 +110,12 @@ class LCD
     auto update_BGP0() -> void;
     auto update_OBP0() -> void;
     auto update_OBP1() -> void;
-    auto load_surface_sprites() -> void;
-    auto load_surface_background() -> void;
+    auto load_texture_sprites() -> void;
+    auto load_texture_background() -> void;
     auto draw_sprites(bool priority) -> void;
     auto draw_background_line() -> void;
     auto draw_window_line() -> bool;
+    auto draw_background_tiles() -> bool;
 
   private:
     RamBus &_ram;
@@ -125,6 +127,7 @@ class LCD
     SDL_Renderer *_renderer;
     SDL_Texture *_texture_sprites;
     SDL_Texture *_texture_background;
+    SDL_Texture *_texture_viewer;
     unsigned int _BGP0[4];
     unsigned int _OBP0[4];
     unsigned int _OBP1[4];

@@ -3,6 +3,7 @@
 
 #include "ram.h"
 #include <SDL3/SDL.h>
+#include <map>
 
 class Controllers
 {
@@ -28,12 +29,13 @@ class Controllers
 
     Controllers();
     auto init(RamBus &ram) -> void;
-    void setInput(SDL_GamepadButtonEvent &event);
-    void setInput(SDL_KeyboardEvent &event);
+    auto setInput(int key, bool down) -> void;
 
   private:
     int mDpads;
     int mButtons;
+    std::map<int, int> _pads_binding;
+    std::map<int, int> _buttons_binding;
 };
 
 #endif

@@ -157,7 +157,7 @@ auto LCD::step(int cycles_count) -> void
             _current_mode = Mode::MODE0;
             break;
         case Mode::MODE0:
-            if (ly < screen_height)
+            if (ly + 1 < screen_height)
                 _current_mode = Mode::MODE2;
             else
                 _current_mode = Mode::MODE1;
@@ -186,8 +186,11 @@ auto LCD::renderer() -> void
 {
     if (_ram[Register::LCDC] & LCD_ENABLE)
     {
+        // draw_background_tiles();
         if (!SDL_SetRenderScale(_renderer, _scale, _scale))
             throw std::runtime_error(std::format("SDL_SetRenderScale : {}", SDL_GetError()));
+        if (!SDL_FlushRenderer(_renderer))
+            throw std::runtime_error(std::format("SDL_FlushRenderer : {}", SDL_GetError()));
         if (!SDL_RenderPresent(_renderer))
             throw std::runtime_error(std::format("SDL_RenderPresent : {}", SDL_GetError()));
         if (!SDL_RenderClear(_renderer))
@@ -212,6 +215,19 @@ auto LCD::set_scale(int scale) -> void
 }
 
 /**
+ * @brief Reload palettes and textures
+ *
+ */
+auto LCD::load_state() -> void
+{
+    update_BGP0();
+    update_OBP0();
+    update_OBP1();
+    load_texture_background();
+    load_texture_sprites();
+}
+
+/**
  * @brief Process a single scanline
  *
  * Handles rendering of sprites, window, and background for the current scanline if LCD is enabled.
@@ -222,8 +238,8 @@ auto LCD::scanline() -> void
 
     if (_reload_surface)
     {
-        load_surface_background();
-        load_surface_sprites();
+        load_texture_background();
+        load_texture_sprites();
         _reload_surface = false;
         _reload_sprite = false;
         _reload_background = false;
@@ -336,7 +352,7 @@ auto LCD::update_OBP1() -> void
  *
  * Updates the sprite texture with data from the tile memory using OBP0 and OBP1 palettes.
  */
-auto LCD::load_surface_sprites() -> void
+auto LCD::load_texture_sprites() -> void
 {
     uint32_t *datas;
     int address;
@@ -374,7 +390,7 @@ auto LCD::load_surface_sprites() -> void
  *
  * Updates the background texture with data from the tile memory using the BGP0 palette.
  */
-auto LCD::load_surface_background() -> void
+auto LCD::load_texture_background() -> void
 {
     uint32_t *datas = nullptr;
     int address = TilesAddress::BLOCK0;
@@ -553,4 +569,28 @@ auto LCD::draw_window_line() -> bool
         }
     }
     return (show_tile);
+}
+
+auto LCD::draw_background_tiles() -> bool
+{
+    int y = 0;
+    SDL_FRect src;
+    SDL_FRect dst;
+
+    for (int i = 0; i < 384; i++)
+    {
+        src.x = (i * tiles_width);
+        src.y = 0;
+        src.w = tiles_width;
+        src.h = tiles_height;
+        dst.x = screen_width + ((i % 16) * tiles_width);
+        dst.y = y;
+        dst.w = tiles_width;
+        dst.h = tiles_height;
+        if ((i + 1) % 16 == 0)
+            y += tiles_height;
+        if (!SDL_RenderTexture(_renderer, _texture_background, &src, &dst))
+            throw std::runtime_error(std::format("SDL_RenderTexture : {}", SDL_GetError()));
+    }
+    return (true);
 }

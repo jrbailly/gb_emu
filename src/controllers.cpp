@@ -2,6 +2,22 @@
 
 Controllers::Controllers() : mDpads(0xf), mButtons(0xf)
 {
+    _pads_binding[SDLK_UP] = UP;
+    _pads_binding[SDL_GAMEPAD_BUTTON_DPAD_UP] = UP;
+    _pads_binding[SDLK_DOWN] = DOWN;
+    _pads_binding[SDL_GAMEPAD_BUTTON_DPAD_DOWN] = DOWN;
+    _pads_binding[SDLK_LEFT] = LEFT;
+    _pads_binding[SDL_GAMEPAD_BUTTON_DPAD_LEFT] = LEFT;
+    _pads_binding[SDLK_RIGHT] = RIGHT;
+    _pads_binding[SDL_GAMEPAD_BUTTON_DPAD_RIGHT] = RIGHT;
+    _buttons_binding[SDLK_RETURN] = START;
+    _buttons_binding[SDL_GAMEPAD_BUTTON_START] = START;
+    _buttons_binding[SDLK_BACKSPACE] = SELECT;
+    _buttons_binding[SDL_GAMEPAD_BUTTON_GUIDE] = SELECT;
+    _buttons_binding[SDLK_LCTRL] = A;
+    _buttons_binding[SDL_GAMEPAD_BUTTON_SOUTH] = A;
+    _buttons_binding[SDLK_LALT] = B;
+    _buttons_binding[SDL_GAMEPAD_BUTTON_EAST] = B;
 }
 
 auto Controllers::init(RamBus &ram) -> void
@@ -18,112 +34,20 @@ auto Controllers::init(RamBus &ram) -> void
     });
 }
 
-void Controllers::setInput(SDL_GamepadButtonEvent &event)
+auto Controllers::setInput(int key, bool down) -> void
 {
-    switch (event.button)
+    if (_pads_binding.find(key) != _pads_binding.end())
     {
-    case SDL_GAMEPAD_BUTTON_DPAD_UP:
-        if (event.down)
-            mDpads &= ~UP;
+        if (down)
+            mDpads &= ~_pads_binding[key];
         else
-            mDpads |= UP;
-        break;
-    case SDL_GAMEPAD_BUTTON_DPAD_DOWN:
-        if (event.down)
-            mDpads &= ~DOWN;
-        else
-            mDpads |= DOWN;
-        break;
-    case SDL_GAMEPAD_BUTTON_DPAD_LEFT:
-        if (event.down)
-            mDpads &= ~LEFT;
-        else
-            mDpads |= LEFT;
-        break;
-    case SDL_GAMEPAD_BUTTON_DPAD_RIGHT:
-        if (event.down)
-            mDpads &= ~RIGHT;
-        else
-            mDpads |= RIGHT;
-        break;
-    case SDL_GAMEPAD_BUTTON_START:
-        if (event.down)
-            mButtons &= ~START;
-        else
-            mButtons |= START;
-        break;
-    case SDL_GAMEPAD_BUTTON_GUIDE:
-        if (event.down)
-            mButtons &= ~SELECT;
-        else
-            mButtons |= SELECT;
-        break;
-    case SDL_GAMEPAD_BUTTON_SOUTH:
-        if (event.down)
-            mButtons &= ~A;
-        else
-            mButtons |= A;
-        break;
-    case SDL_GAMEPAD_BUTTON_EAST:
-        if (event.down)
-            mButtons &= ~B;
-        else
-            mButtons |= B;
-        break;
+            mDpads |= _pads_binding[key];
     }
-}
-
-void Controllers::setInput(SDL_KeyboardEvent &event)
-{
-    switch (event.key)
+    if (_buttons_binding.find(key) != _buttons_binding.end())
     {
-    case SDLK_UP:
-        if (event.down)
-            mDpads &= ~UP;
+        if (down)
+            mButtons &= ~_buttons_binding[key];
         else
-            mDpads |= UP;
-        break;
-    case SDLK_DOWN:
-        if (event.down)
-            mDpads &= ~DOWN;
-        else
-            mDpads |= DOWN;
-        break;
-    case SDLK_LEFT:
-        if (event.down)
-            mDpads &= ~LEFT;
-        else
-            mDpads |= LEFT;
-        break;
-    case SDLK_RIGHT:
-        if (event.down)
-            mDpads &= ~RIGHT;
-        else
-            mDpads |= RIGHT;
-        break;
-    case SDLK_RETURN:
-        if (event.down)
-            mButtons &= ~START;
-        else
-            mButtons |= START;
-        break;
-    case SDLK_BACKSPACE:
-        if (event.down)
-            mButtons &= ~SELECT;
-        else
-            mButtons |= SELECT;
-        break;
-    case SDLK_LCTRL:
-        if (event.down)
-            mButtons &= ~A;
-        else
-            mButtons |= A;
-        break;
-    case SDLK_LALT:
-        if (event.down)
-            mButtons &= ~B;
-        else
-            mButtons |= B;
-        break;
+            mButtons |= _buttons_binding[key];
     }
 }

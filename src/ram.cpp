@@ -50,41 +50,6 @@ auto RamBus::write_range(unsigned int start_address, unsigned int dst_address, s
 }
 
 /**
- * @brief Load a saved cartridge ram from file
- *
- * @param romfile ROM filepath
- */
-auto RamBus::load_ram(const std::string &rom_file) -> void
-{
-    std::string filename = rom_file + ".ram";
-    std::ifstream input(filename.data(), std::ios::binary);
-    std::streamsize bytesRead;
-    std::array<unsigned char, ROM_RAM_SIZE> block;
-
-    if (input)
-    {
-        input.read(reinterpret_cast<char *>(block.data()), ROM_RAM_SIZE);
-        bytesRead = input.gcount();
-        if (bytesRead == ROM_RAM_SIZE)
-            std::copy(block.begin(), block.end(), _ram.begin() + ROM_RAM_ADDRESS);
-    }
-}
-
-/**
- * @brief Save cartridge ram to a file. The extension ".ram" will be added to the rom file.
- *
- * @param rom_file ROM filepath
- */
-auto RamBus::save_ram(const std::string &rom_file) -> void
-{
-    std::string filename = rom_file + ".ram";
-    std::ofstream output(filename.data(), std::ios::binary);
-
-    if (output)
-        output.write(reinterpret_cast<char *>(&_ram[ROM_RAM_ADDRESS]), ROM_RAM_SIZE);
-}
-
-/**
  * @brief Register a callback to call when a write is done at a specific address
  *
  * @param address Register address

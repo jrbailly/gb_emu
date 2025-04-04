@@ -34,7 +34,6 @@ auto Emulator::init() -> void
     _controllers->init(_ram);
     _lcd->init(_ram);
     _timer->init(_ram);
-    _ram.load_ram(_config.mRomFile);
     _lcd->set_scale(_config._screen_scale);
 }
 
@@ -84,24 +83,23 @@ auto Emulator::process_sdl_events() -> bool
         switch (event.type)
         {
         case SDL_EVENT_QUIT:
-            _ram.save_ram(_config.mRomFile);
             return (true);
             break;
         case SDL_EVENT_KEY_DOWN:
-            _controllers->setInput(event.key);
+            _controllers->setInput(event.key.key, event.key.down);
             if (event.key.key == SDLK_F1)
                 save_state();
             if (event.key.key == SDLK_F2)
                 load_state();
             break;
         case SDL_EVENT_KEY_UP:
-            _controllers->setInput(event.key);
+            _controllers->setInput(event.key.key, event.key.down);
             break;
         case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-            _controllers->setInput(event.gbutton);
+            _controllers->setInput(event.gbutton.button, event.gbutton.down);
             break;
         case SDL_EVENT_GAMEPAD_BUTTON_UP:
-            _controllers->setInput(event.gbutton);
+            _controllers->setInput(event.gbutton.button, event.gbutton.down);
             break;
         default:
             break;
@@ -141,4 +139,6 @@ auto Emulator::load_state() -> void
 
     for (auto &value : state["ram"])
         _ram.write_register(address++, value.get<unsigned char>());
+
+    _lcd->load_state();
 }
