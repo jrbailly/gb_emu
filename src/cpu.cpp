@@ -51,7 +51,7 @@ CPU::CPU(RamBus &ram) : _ram(ram)
     _registers.ime = 0;
     _registers.pc = 0x100;
     _registers.sp = 0xfffe;
-    _registers.regs8[Reg8::A] = 0x01;
+    _registers.regs8[Reg8::A] = 0x11;
     _registers.regs8[Reg8::F] = 0xB0;
     _registers.regs8[Reg8::B] = 0x00;
     _registers.regs8[Reg8::C] = 0x13;
@@ -70,13 +70,12 @@ CPU::CPU(RamBus &ram) : _ram(ram)
  */
 void CPU::debug(uint32_t)
 {
-#ifdef A
     if (_registers.halt == 0)
     {
-        // #ifdef A
+#ifdef A
         FILE *f = nullptr;
         /*stdout; */ fopen_s(&f, "log", "a+");
-        fprintf(f, "A:%2X F:", _registers.regs8[Reg8::A]);
+        fprintf(f, "A:%02X F:", _registers.regs8[Reg8::A]);
         if (_registers.regs8[Reg8::F] & 0x80)
             fprintf(f, "Z");
         else
@@ -96,9 +95,8 @@ void CPU::debug(uint32_t)
         fprintf(f, " BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x (cy: %d)\n", _registers.regs16[Reg16::BC],
                 _registers.regs16[Reg16::DE], _registers.regs16[Reg16::HL], _registers.sp, _registers.pc, cycles);
         fclose(f);
-        // #endif
-    }
 #endif
+    }
 }
 
 /**
@@ -107,7 +105,8 @@ void CPU::debug(uint32_t)
  */
 uint8_t CPU::step()
 {
-    int8_t cycles_count = 0;
+    int8_t cycles_count = 1;
+    bool actived_interrupt = false;
 
     if (_registers.halt && _ram[Register::IF])
         _registers.halt = 0;
@@ -120,15 +119,15 @@ uint8_t CPU::step()
             cycles_count = active_interrupt(0x2, InterruptAddress::STAT);
         else if (interrupts & 0x4)
             cycles_count = active_interrupt(0x4, InterruptAddress::TIMER);
+        else if (interrupts & 0x8)
+            cycles_count = active_interrupt(0x8, InterruptAddress::SERIAL);
         else if (interrupts & 0x10)
-            cycles_count = active_interrupt(0x10, InterruptAddress::SERIAL);
-        else if (interrupts & 0x20)
-            cycles_count = active_interrupt(0x20, InterruptAddress::JOYPAD);
+            cycles_count = active_interrupt(0x10, InterruptAddress::JOYPAD);
+        if (interrupts)
+            actived_interrupt = true;
     }
-    if (!_registers.halt)
-        cycles_count += decode();
-    else
-        cycles_count = 1;
+    if (actived_interrupt == false && _registers.halt == 0)
+        cycles_count = decode();
     return (cycles_count * MACHINE_CYCLE);
 }
 
@@ -630,11 +629,10 @@ uint8_t CPU::decode()
     case (0xca):
     case (0xd2):
     case (0xda):
+        cycles_count = 4;
         value = _ram[_registers.pc++];
         value |= (_ram[_registers.pc++] << 8);
-        jump_conditionnal(opcode, value);
-        cycles_count = 4;
-        if (_registers.pc != value)
+        if (!jump_conditionnal(opcode, value))
             cycles_count--;
         break;
     case (0x18):
@@ -646,11 +644,10 @@ uint8_t CPU::decode()
     case (0x28):
     case (0x30):
     case (0x38):
+        cycles_count = 3;
         relative = _ram[_registers.pc++];
         value = _registers.pc + relative;
-        jump_conditionnal(opcode, value);
-        cycles_count = 3;
-        if (_registers.pc != value)
+        if (!jump_conditionnal(opcode, value))
             cycles_count--;
         break;
     case (0xcd):
@@ -1606,14 +1603,18 @@ inline void CPU::jump(uint16_t addr)
  * @param opcode The opcode determining the condition.
  * @param addr The address to jump to if the condition is met.
  */
-inline void CPU::jump_conditionnal(uint8_t opcode, uint16_t addr)
+inline bool CPU::jump_conditionnal(uint8_t opcode, uint16_t addr)
 {
     uint8_t cc = (opcode >> 3) & 0x3;
     uint8_t c = (_registers.regs8[Reg8::F] & Flags::c) >> 4;
     uint8_t z = (_registers.regs8[Reg8::F] & Flags::z) >> 7;
 
     if ((cc == 0 && z == 0) || (cc == 1 && z == 1) || (cc == 2 && c == 0) || (cc == 3 && c == 1))
+    {
         _registers.pc = addr;
+        return (true);
+    }
+    return (false);
 }
 
 /**

@@ -55,7 +55,7 @@ auto Timer::step(RamBus &ram, int cycles_count) -> void
         ram.write_register(Register::DIV, div);
         _next_cycle_div += cycles_per_div_increment;
     }
-    if (_next_cycle_tima <= 0 && _cycle_tima > 0)
+    while (_next_cycle_tima <= 0 && _cycle_tima > 0)
     {
         unsigned char tima = ram[Register::TIMA];
 

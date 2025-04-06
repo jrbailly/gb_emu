@@ -34,7 +34,6 @@ LCD::LCD(RamBus &ram) : _ram(ram), _scale(1)
     _mode_cyles[Mode::MODE3] = cycles_mode3;
     _mode_cyles[Mode::MODE0] = cycles_mode0;
     _mode_cyles[Mode::MODE1] = cycles_per_line;
-    _mode_cyles[Mode::RENDER] = 0;
     _next_op_cycle = 0;
     _background_change.fill(0);
     _sprite_change.fill(0);
@@ -163,14 +162,8 @@ auto LCD::step(int cycles_count) -> void
                 _current_mode = Mode::MODE1;
             break;
         case Mode::MODE1:
-            if (ly + 1 < max_lines)
-                _current_mode = Mode::MODE1;
-            else
-                _current_mode = Mode::RENDER;
+            _current_mode = Mode::MODE1;
             break;
-        case Mode::RENDER:
-            renderer();
-            _current_mode = Mode::MODE2;
         }
         update_stat();
     }
@@ -198,6 +191,8 @@ auto LCD::renderer() -> void
     }
     _next_op_cycle = 0;
     _total_cycle = 0;
+    _current_mode = Mode::MODE2;
+    _ram.write(Register::LY, max_lines - 1);
 }
 
 /**

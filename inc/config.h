@@ -5,7 +5,9 @@
 
 struct Config
 {
-    std::string mRomFile;
-    int _screen_scale = 3;
+    std::string _romfile;
+    int _screen_scale;
+    std::string _recordfile;
+    bool _audio_filter;
 };
 #endif

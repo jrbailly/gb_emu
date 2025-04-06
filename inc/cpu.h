@@ -113,7 +113,7 @@ class CPU
     uint8_t bit_set(uint8_t bit, uint8_t value);
     uint8_t bit_reset(uint8_t bit, uint8_t value);
     void jump(uint16_t addr);
-    void jump_conditionnal(uint8_t opcode, uint16_t addr);
+    bool jump_conditionnal(uint8_t opcode, uint16_t addr);
     void call(uint16_t addr);
     void call_conditionnal(uint8_t opcode, uint16_t addr);
     void ret();

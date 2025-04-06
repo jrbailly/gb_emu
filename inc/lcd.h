@@ -84,7 +84,6 @@ class LCD
         MODE1,
         MODE2,
         MODE3,
-        RENDER,
     };
     enum GrayLevel
     {
@@ -100,9 +99,9 @@ class LCD
     auto step(int cycles_count) -> void;
     auto set_scale(int scale) -> void;
     auto load_state() -> void;
+    auto renderer() -> void;
 
   private:
-    auto renderer() -> void;
     auto create_window() -> void;
     auto destroy_window() -> void;
     auto scanline() -> void;
@@ -135,7 +134,7 @@ class LCD
     bool _reload_surface;
     bool _reload_sprite;
     bool _reload_background;
-    std::array<int, 5> _mode_cyles;
+    std::array<int, 4> _mode_cyles;
     std::array<int, max_tiles> _background_change;
     std::array<int, max_tiles> _sprite_change;
 };

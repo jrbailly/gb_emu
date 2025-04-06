@@ -27,11 +27,11 @@ Emulator::Emulator(const Config &configuration)
  */
 auto Emulator::init() -> void
 {
-    _cartridge->read_rom(_config.mRomFile);
+    _cartridge->read_rom(_config._romfile);
     _cartridge->load_rom(_ram);
     _cartridge->init(_ram);
-    _apu->init(_ram);
-    _controllers->init(_ram);
+    _apu->init(_ram, _config);
+    _controllers->init(_ram, _config);
     _lcd->init(_ram);
     _timer->init(_ram);
     _lcd->set_scale(_config._screen_scale);
@@ -54,9 +54,10 @@ auto Emulator::loop() -> void
         cycles_count = 0;
         if (process_sdl_events())
             return;
+        _controllers->step();
         while (cycles_count < frame_cycle_count)
         {
-            //  _cpu->debug(cycles_count);
+            //_cpu->debug(cycles_count);
             cycles = _cpu->step();
             cycles_count += cycles;
             _lcd->step(cycles);
@@ -64,6 +65,7 @@ auto Emulator::loop() -> void
             _timer->step(_ram, cycles);
         }
         _apu->flush();
+        _lcd->renderer();
         auto end_time = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
         SDL_DelayPrecise(1000.0 * (frame_duration - elapsed));
@@ -111,7 +113,7 @@ auto Emulator::process_sdl_events() -> bool
 auto Emulator::save_state() -> void
 {
     nlohmann::json state;
-    std::string filename = _config.mRomFile + ".json";
+    std::string filename = _config._romfile + ".json";
     std::ofstream file(filename.data());
 
     if (!file.is_open())
@@ -126,7 +128,7 @@ auto Emulator::save_state() -> void
 auto Emulator::load_state() -> void
 {
     nlohmann::json state;
-    std::string filename = _config.mRomFile + ".json";
+    std::string filename = _config._romfile + ".json";
     std::ifstream file(filename.data());
     std::map<std::string, int> registers;
     int address = 0;

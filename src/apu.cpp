@@ -47,7 +47,7 @@ auto APU::init_sdl() -> void
  * @brief Initializes the APU by registering memory callbacks for sound control registers.
  * @param ram Reference to the RamBus object for registering callbacks.
  */
-auto APU::init(RamBus &ram) -> void
+auto APU::init(RamBus &ram, const Config &config) -> void
 {
     int reg = Register::NR14;
     for (int i = 0; i < 4; ++i)
@@ -63,6 +63,7 @@ auto APU::init(RamBus &ram) -> void
             ram.write_register(NR52, ram[NR52] & ~(1 << 3));
     });
     init_sdl();
+    _active_filter = config._audio_filter;
 }
 
 /**
@@ -99,7 +100,8 @@ auto APU::step(uint32_t cycles_count) -> void
  */
 auto APU::flush() -> void
 {
-    filter();
+    if (_active_filter)
+        filter();
     if (!SDL_PutAudioStreamData(_audio_stream, _buffer.data(), _buffer_index * sizeof(int16_t)))
         throw std::runtime_error(std::format("SDL_PutAudioStreamData : {}", SDL_GetError()));
     _buffer_index = 0;
@@ -113,6 +115,7 @@ auto APU::load_state() -> void
 {
     int reg = Register::NR14;
 
+    _ram.write(Register::NR52, 0x80);
     for (int i = 0; i < 4; ++i)
     {
         if (_ram[reg] & 0x80)
