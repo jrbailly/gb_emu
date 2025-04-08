@@ -11,9 +11,13 @@
  *
  * @param ram Reference to the RamBus object used for memory access
  */
-LCD::LCD(RamBus &ram) : _ram(ram), _scale(1)
+LCD::LCD(RamBus &ram) : _ram(ram)
 {
+    _stat_interrupt = false;
+    _next_ly = 0;
+    _scale = 1;
     _current_mode = Mode::MODE2;
+    _next_mode = Mode::MODE2;
     _colors[GrayLevel::TRANSPARENT] = 0x0;
     _colors[GrayLevel::LIGHT_GRAY] = 0xA0A0A0FF;
     _colors[GrayLevel::DARK_GRAY] = 0x585858FF;
@@ -37,8 +41,7 @@ LCD::LCD(RamBus &ram) : _ram(ram), _scale(1)
     _next_op_cycle = 0;
     _background_change.fill(0);
     _sprite_change.fill(0);
-    _total_cycle = 0;
-    _ram.write_register(Register::LY, max_lines - 1);
+    _ram.write_register(Register::LY, 0);
 }
 
 /**
@@ -135,37 +138,51 @@ auto LCD::step(int cycles_count) -> void
 {
     unsigned char ly;
 
-    _total_cycle += cycles_count;
-    _next_op_cycle -= cycles_count;
-    if (_next_op_cycle <= 0)
+    if (_ram[Register::LCDC] & LCD_ENABLE)
     {
-        ly = _ram[Register::LY];
-        _next_op_cycle += _mode_cyles[_current_mode];
-        if (_current_mode == Mode::MODE2 || _current_mode == Mode::MODE1)
+        _next_op_cycle -= cycles_count;
+        if (_next_op_cycle <= 0)
         {
-            ly = (ly + 1) % max_lines;
-            _ram.write(Register::LY, ly);
+            _current_mode = _next_mode;
+            if (_next_ly != _ram[Register::LY])
+                _ram.write_register(Register::LY, _next_ly);
+            ly = _ram[Register::LY];
+            _next_op_cycle += _mode_cyles[_current_mode];
+            switch (_current_mode)
+            {
+            case Mode::MODE2:
+                _next_mode = Mode::MODE3;
+                break;
+            case Mode::MODE3:
+                scanline();
+                _next_mode = Mode::MODE0;
+                break;
+            case Mode::MODE0:
+                if (ly + 1 < screen_height)
+                    _next_mode = Mode::MODE2;
+                else
+                    _next_mode = Mode::MODE1;
+                _next_ly = ly + 1;
+                break;
+            case Mode::MODE1:
+                _next_mode = Mode::MODE1;
+                _next_ly = (ly + 1) % max_lines;
+                if ((ly + 1) == max_lines)
+                {
+                    renderer();
+                    _next_mode = Mode::MODE2;
+                }
+                break;
+            }
+            update_stat();
         }
-        switch (_current_mode)
-        {
-        case Mode::MODE2:
-            _current_mode = Mode::MODE3;
-            break;
-        case Mode::MODE3:
-            scanline();
-            _current_mode = Mode::MODE0;
-            break;
-        case Mode::MODE0:
-            if (ly + 1 < screen_height)
-                _current_mode = Mode::MODE2;
-            else
-                _current_mode = Mode::MODE1;
-            break;
-        case Mode::MODE1:
-            _current_mode = Mode::MODE1;
-            break;
-        }
-        update_stat();
+    }
+    else
+    {
+        _next_mode = Mode::MODE2;
+        _ram.write_register(Register::LY, 0);
+        _next_op_cycle = 0;
+        _next_ly = 0;
     }
 }
 
@@ -177,22 +194,15 @@ auto LCD::step(int cycles_count) -> void
  */
 auto LCD::renderer() -> void
 {
-    if (_ram[Register::LCDC] & LCD_ENABLE)
-    {
-        // draw_background_tiles();
-        if (!SDL_SetRenderScale(_renderer, _scale, _scale))
-            throw std::runtime_error(std::format("SDL_SetRenderScale : {}", SDL_GetError()));
-        if (!SDL_FlushRenderer(_renderer))
-            throw std::runtime_error(std::format("SDL_FlushRenderer : {}", SDL_GetError()));
-        if (!SDL_RenderPresent(_renderer))
-            throw std::runtime_error(std::format("SDL_RenderPresent : {}", SDL_GetError()));
-        if (!SDL_RenderClear(_renderer))
-            throw std::runtime_error(std::format("SDL_RenderClear : {}", SDL_GetError()));
-    }
-    _next_op_cycle = 0;
-    _total_cycle = 0;
-    _current_mode = Mode::MODE2;
-    _ram.write(Register::LY, max_lines - 1);
+    // draw_background_tiles();
+    if (!SDL_SetRenderScale(_renderer, _scale, _scale))
+        throw std::runtime_error(std::format("SDL_SetRenderScale : {}", SDL_GetError()));
+    if (!SDL_FlushRenderer(_renderer))
+        throw std::runtime_error(std::format("SDL_FlushRenderer : {}", SDL_GetError()));
+    if (!SDL_RenderPresent(_renderer))
+        throw std::runtime_error(std::format("SDL_RenderPresent : {}", SDL_GetError()));
+    if (!SDL_RenderClear(_renderer))
+        throw std::runtime_error(std::format("SDL_RenderClear : {}", SDL_GetError()));
 }
 
 /**
@@ -263,6 +273,7 @@ auto LCD::update_stat() -> void
     unsigned char ly = _ram[Register::LY];
     unsigned char lyc = _ram[Register::LYC];
     unsigned char interrupt = _ram[CPU::Register::IF];
+    bool stat_interrupt = false;
 
     if (ly == screen_height)
         interrupt |= 0x1;
@@ -270,13 +281,16 @@ auto LCD::update_stat() -> void
     if (ly == lyc)
         stat |= LYC_LY;
     if ((stat & MODE0_INT) && _current_mode == Mode::MODE0)
-        interrupt |= 0x2;
+        stat_interrupt = true;
     if ((stat & MODE1_INT) && _current_mode == Mode::MODE1)
-        interrupt |= 0x2;
+        stat_interrupt = true;
     if ((stat & MODE2_INT) && _current_mode == Mode::MODE2)
-        interrupt |= 0x2;
+        stat_interrupt = true;
     if ((stat & LYC_INT) && (ly == lyc))
+        stat_interrupt = true;
+    if (!_stat_interrupt && stat_interrupt)
         interrupt |= 0x2;
+    _stat_interrupt = stat_interrupt;
     _ram.write_register(CPU::Register::IF, interrupt);
     _ram.write_register(Register::STAT, stat);
 }

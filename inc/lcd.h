@@ -20,8 +20,7 @@ static constexpr int cycles_mode3 = 172;
 static constexpr int cycles_mode0 = 204;
 static constexpr int cycles_per_line = 456;
 static constexpr int max_lines = 154;
-static constexpr int frame_cycle_count = cycles_per_line * max_lines;
-static constexpr int frame_duration = ((long long int)frame_cycle_count * 1000000) / CPU_FREQ;
+
 class LCD
 {
   public:
@@ -118,10 +117,12 @@ class LCD
 
   private:
     RamBus &_ram;
+    bool _stat_interrupt;
+    int _next_ly;
     int _scale;
     int _next_op_cycle;
-    int _total_cycle;
     Mode _current_mode;
+    Mode _next_mode;
     SDL_Window *_window;
     SDL_Renderer *_renderer;
     SDL_Texture *_texture_sprites;

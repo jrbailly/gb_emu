@@ -11,6 +11,10 @@
 #include "timer.h"
 #include <memory>
 
+static constexpr int refresh_rate = 60;
+static constexpr int frame_cycle_count = CPU_FREQ / refresh_rate;
+static constexpr int frame_duration = (1000000 / refresh_rate);
+
 class Emulator
 {
   public:

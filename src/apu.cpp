@@ -115,7 +115,7 @@ auto APU::load_state() -> void
 {
     int reg = Register::NR14;
 
-    _ram.write(Register::NR52, 0x80);
+    _ram.write_register(Register::NR52, 0x80);
     for (int i = 0; i < 4; ++i)
     {
         if (_ram[reg] & 0x80)

@@ -19,7 +19,7 @@ bool ParseCommandLine(int argc, char **argv, Config &config)
     options.add_options()("f,filename", "ROM file", cxxopts::value<std::string>())(
         "s,screen_scale", "Screen size", cxxopts::value<int>()->default_value("3"))(
         "a,audio_filter", "Sound High Pass Filter", cxxopts::value<int>()->default_value("1"))(
-        "r,record_file", "Inputs record file", cxxopts::value<int>()->default_value("1"))("h,help", "Help");
+        "r,record_file", "Inputs record file", cxxopts::value<std::string>())("h,help", "Help");
 
     auto result = options.parse(argc, argv);
 
@@ -51,8 +51,9 @@ int main(int argc, char **argv)
 
     try
     {
-        Configuration._romfile = "/media/data/workspace/gb_emu/Super Mario Land (World).gb";
-        Configuration._recordfile = "/media/data/workspace/gb_emu/inputs.txt";
+        Configuration._romfile = "d:\\workspace\\gb_emu\\test.gb";
+        // Configuration._romfile = "d:\\workspace\\gb_emu\\Super Mario Land (World).gb";
+        // Configuration._recordfile = "d:\\workspace\\gb_emu\\inputs.txt";
         if (!ParseCommandLine(argc, argv, Configuration))
             return (EXIT_SUCCESS);
         App.MainLoop(Configuration);

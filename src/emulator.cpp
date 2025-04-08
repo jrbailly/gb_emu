@@ -13,7 +13,7 @@
  */
 Emulator::Emulator(const Config &configuration)
     : _ram(), _apu(std::make_unique<APU>(_ram)), _cartridge(std::make_unique<Cartridge>()),
-      _controllers(std::make_unique<Controllers>()), _cpu(std::make_unique<CPU>(_ram)),
+      _controllers(std::make_unique<Controllers>(_ram)), _cpu(std::make_unique<CPU>(_ram)),
       _lcd(std::make_unique<LCD>(_ram)), _timer(std::make_unique<Timer>()), _config(configuration)
 {
 }
@@ -45,6 +45,7 @@ auto Emulator::loop() -> void
 {
     uint32_t cycles = 0;
     uint32_t cycles_count = 0;
+    uint32_t total_cycles = 0;
 
     while (true)
     {
@@ -54,18 +55,19 @@ auto Emulator::loop() -> void
         cycles_count = 0;
         if (process_sdl_events())
             return;
-        _controllers->step();
         while (cycles_count < frame_cycle_count)
         {
-            //_cpu->debug(cycles_count);
+            _cpu->debug(total_cycles);
             cycles = _cpu->step();
-            cycles_count += cycles;
-            _lcd->step(cycles);
             _apu->step(cycles);
+            _controllers->step(cycles);
+            _lcd->step(cycles);
             _timer->step(_ram, cycles);
+            cycles_count += cycles;
+            total_cycles += cycles;
         }
         _apu->flush();
-        _lcd->renderer();
+        cycles_count -= frame_cycle_count;
         auto end_time = std::chrono::high_resolution_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
         SDL_DelayPrecise(1000.0 * (frame_duration - elapsed));

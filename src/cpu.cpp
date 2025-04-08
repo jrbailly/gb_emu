@@ -45,7 +45,7 @@ constexpr std::array<uint16_t, 2048> intToBcd = [] {
  * @brief Constructs a CPU object with a reference to the RAM bus.
  * @param ram Reference to the RAM bus.
  */
-CPU::CPU(RamBus &ram) : _ram(ram)
+CPU::CPU(RamBus &ram) : _ram(ram), _active_interruption(false)
 {
     _registers.halt = 0;
     _registers.ime = 0;
@@ -68,34 +68,19 @@ CPU::CPU(RamBus &ram) : _ram(ram)
  * @brief Outputs debug information about the CPU state.
  * @param cycles Number of executed cycles.
  */
-void CPU::debug(uint32_t)
+void CPU::debug(uint32_t cycles)
 {
     if (_registers.halt == 0)
     {
-#ifdef A
         FILE *f = nullptr;
         /*stdout; */ fopen_s(&f, "log", "a+");
-        fprintf(f, "A:%02X F:", _registers.regs8[Reg8::A]);
-        if (_registers.regs8[Reg8::F] & 0x80)
-            fprintf(f, "Z");
-        else
-            fprintf(f, "-");
-        if (_registers.regs8[Reg8::F] & 0x40)
-            fprintf(f, "N");
-        else
-            fprintf(f, "-");
-        if (_registers.regs8[Reg8::F] & 0x20)
-            fprintf(f, "H");
-        else
-            fprintf(f, "-");
-        if (_registers.regs8[Reg8::F] & 0x10)
-            fprintf(f, "C");
-        else
-            fprintf(f, "-");
-        fprintf(f, " BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x (cy: %d)\n", _registers.regs16[Reg16::BC],
-                _registers.regs16[Reg16::DE], _registers.regs16[Reg16::HL], _registers.sp, _registers.pc, cycles);
+        fprintf(f, "%04X:", _registers.pc);
+        fprintf(
+            f, " A:%02x F:%02x B:%02x C:%02x D:%02x E:%02x H:%02x L:%02x LY:%02x SP:%04x  (Cy: %d) IF:%02x IE:%02x\n",
+            _registers.regs8[Reg8::A], _registers.regs8[Reg8::F], _registers.regs8[Reg8::B], _registers.regs8[Reg8::C],
+            _registers.regs8[Reg8::D], _registers.regs8[Reg8::E], _registers.regs8[Reg8::H], _registers.regs8[Reg8::L],
+            _ram[0xFF44], _registers.sp, cycles, _ram[Register::IF], _ram[Register::IE]);
         fclose(f);
-#endif
     }
 }
 
@@ -108,9 +93,9 @@ uint8_t CPU::step()
     int8_t cycles_count = 1;
     bool actived_interrupt = false;
 
-    if (_registers.halt && _ram[Register::IF])
+    if (_registers.halt && (_ram[Register::IF] & _ram[Register::IE]))
         _registers.halt = 0;
-    if (_registers.ime == 1)
+    if (_registers.ime == 1 && _active_interruption == false)
     {
         uint8_t interrupts = _ram[Register::IE] & _ram[Register::IF];
         if (interrupts & 0x1)
@@ -126,6 +111,7 @@ uint8_t CPU::step()
         if (interrupts)
             actived_interrupt = true;
     }
+    _active_interruption = false;
     if (actived_interrupt == false && _registers.halt == 0)
         cycles_count = decode();
     return (cycles_count * MACHINE_CYCLE);
@@ -1704,6 +1690,7 @@ inline void CPU::di()
 inline void CPU::ei()
 {
     _registers.ime = 1;
+    _active_interruption = true;
 }
 
 /**

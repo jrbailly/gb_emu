@@ -1,9 +1,12 @@
 #include "controllers.h"
+#include "cpu.h"
+#include <filesystem>
 #include <format>
 #include <fstream>
 #include <string>
 
-Controllers::Controllers() : _dpads(0xf), _buttons(0xf), _record_index(0), _play_record(false)
+Controllers::Controllers(RamBus &ram)
+    : _ram(ram), _dpads(0xf), _buttons(0xf), _record_index(0), _next_record(-1), _play_record(false)
 {
     _dpads_binding[SDLK_UP] = UP;
     _dpads_binding[SDL_GAMEPAD_BUTTON_DPAD_UP] = UP;
@@ -26,14 +29,15 @@ Controllers::Controllers() : _dpads(0xf), _buttons(0xf), _record_index(0), _play
 auto Controllers::init(RamBus &ram, const Config &config) -> void
 {
     ram.register_callback(Register::JOYP, [this](RamBus &ram, int, unsigned char val) {
-        uint8_t value = val & 0x30;
+        uint8_t value = val & 0xF0;
 
-        if (value & 0x20 && _dpads != 0xF)
-            ram.write_register(Register::JOYP, 0x20 | _dpads);
-        else if (value & 0x10 && _buttons != 0xF)
-            ram.write_register(Register::JOYP, 0x10 | _buttons);
-        else
-            ram.write_register(Register::JOYP, 0x3F);
+        if ((value & 0x20) == 0)
+            value = 0x20 | _buttons;
+        else if ((value & 0x10) == 0)
+            value = 0x10 | _dpads;
+        if (_dpads == 0xF && _buttons == 0xF)
+            value = 0x3F;
+        ram.write_register(Register::JOYP, value);
     });
     if (!config._recordfile.empty())
         parse_recordfile(config._recordfile);
@@ -58,15 +62,31 @@ auto Controllers::setInput(int key, bool down) -> void
                 _buttons |= _buttons_binding[key];
         }
     }
+    if (down)
+        _ram.write_register(CPU::Register::IF, _ram[CPU::Register::IF] | 0x10);
 }
 
-auto Controllers::step() -> void
+auto Controllers::step(uint32_t cycles) -> void
 {
-    if (_play_record)
+    int last_dpads = _dpads;
+    int last_buttons = _buttons;
+    bool active_interrupt = false;
+
+    _next_record -= cycles;
+    if (_play_record && _next_record <= 0)
     {
         _dpads = _dpads_records[_record_index];
         _buttons = _buttons_records[_record_index];
         _record_index = (_record_index + 1) % _dpads_records.size();
+        for (int i = 0; i < 4; ++i)
+        {
+            if (((last_dpads & (1 << i)) && ((_dpads & (1 << i)) == 0)) ||
+                ((last_buttons & (1 << i)) && ((_buttons & (1 << i)) == 0)))
+                active_interrupt = true;
+        }
+        if (active_interrupt)
+            _ram.write_register(CPU::Register::IF, _ram[CPU::Register::IF] | 0x10);
+        _next_record += RECORD_CYCLE;
     }
 }
 

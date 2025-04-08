@@ -130,6 +130,7 @@ class CPU
   private:
     Registers _registers;
     RamBus &_ram;
+    bool _active_interruption;
     std::map<std::string, int> _register_index;
     std::array<Reg8, 8> _map_reg;
 };

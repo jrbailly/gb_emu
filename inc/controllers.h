@@ -7,6 +7,8 @@
 #include <map>
 #include <vector>
 
+static constexpr int RECORD_CYCLE = 69905;
+
 class Controllers
 {
   public:
@@ -29,18 +31,20 @@ class Controllers
         START = 0x08,
     };
 
-    Controllers();
+    Controllers(RamBus &ram);
     auto init(RamBus &ram, const Config &config) -> void;
     auto setInput(int key, bool down) -> void;
-    auto step() -> void;
+    auto step(uint32_t cycles) -> void;
 
   private:
     auto parse_recordfile(const std::string &filename) -> void;
 
   private:
+    RamBus &_ram;
     int _dpads;
     int _buttons;
     int _record_index;
+    int _next_record;
     bool _play_record;
     std::map<int, int> _dpads_binding;
     std::map<int, int> _buttons_binding;
