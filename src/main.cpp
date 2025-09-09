@@ -51,7 +51,6 @@ int main(int argc, char **argv)
 
     try
     {
-        Configuration._romfile = "d:\\workspace\\gb_emu\\test.gb";
         // Configuration._romfile = "d:\\workspace\\gb_emu\\Super Mario Land (World).gb";
         // Configuration._recordfile = "d:\\workspace\\gb_emu\\inputs.txt";
         if (!ParseCommandLine(argc, argv, Configuration))

@@ -14,6 +14,8 @@ target_compile_options(gb_emu PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 
 file(GLOB_RECURSE SRCS_TEST src/cpu.cpp src/ram.cpp tests/*.cpp)
+install(TARGETS gb_emu DESTINATION bin)
+
 #add_executable(gb_emu_test ${SRCS_TEST})
 #target_link_libraries(gb_emu_test PRIVATE SDL3::SDL3 GTest::gtest_main)
 #gtest_discover_tests(gb_emu_test)

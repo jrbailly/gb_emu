@@ -17,7 +17,7 @@ It can actually run : Super Mario Land, Tetris , Mario's Picross, Legend of Zeld
 
 ### Dependencies
 To compile this project, ensure you have the following tools and libraries installed on your system:
-- gcc ou clang
+- gcc or clang
 - SDL3
 - nlohmann_json
 - Google Test
@@ -32,10 +32,7 @@ To compile this project, ensure you have the following tools and libraries insta
     make
 
 ## Project Status
-This project is currently under development. Features envisioned for future versions include:
-- Support for other cartridge types (MBC2, MBC3, etc.).
-- Emulation of the GameBoy Color.
-- Addition of a graphical user interface.
+This project is currently under development.
 
 ## License
 Distributed under the MIT License. See LICENSE.txt for more information.

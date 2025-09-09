@@ -1,0 +1,12 @@
+Package: gbemu-dbgsym
+Source: gbemu
+Version: 0.1-1
+Auto-Built-Package: debug-symbols
+Architecture: riscv64
+Maintainer: Jerome Bailly <john.doe@null.org>
+Installed-Size: 3257
+Depends: gbemu (= 0.1-1)
+Section: debug
+Priority: optional
+Description: debug symbols for gbemu
+Build-Ids: 7ddb31cccd27baf346750aa9b7a6609d99e96e21

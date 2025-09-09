@@ -1,0 +1,24 @@
+Source: gbemu
+Section: games
+Priority: optional
+Maintainer: Jerome Bailly <john.doe@null.org>
+Rules-Requires-Root: no
+Build-Depends:
+ debhelper-compat (= 13),
+ cmake,
+ libsdl3-dev,
+ nlohmann-json3-dev,
+ googletest,
+ libgtest-dev,
+ g++ | clang,
+Standards-Version: 4.7.2
+
+Package: gbemu
+Architecture: any
+Depends:
+ ${shlibs:Depends},
+ ${misc:Depends},
+ libsdl3,
+Description: GameBoy Emulator supports DMG games
+ This emulator is designed to replicate the functionality of the original GameBoy consoles.
+ It currently supports only the DMG (Dot Matrix Game) models and MBC1 (Memory Bank Controller 1) cartridges.
