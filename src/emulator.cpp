@@ -57,7 +57,7 @@ auto Emulator::loop() -> void
             return;
         while (cycles_count < frame_cycle_count)
         {
-            _cpu->debug(total_cycles);
+            //_cpu->debug(total_cycles);
             cycles = _cpu->step();
             _apu->step(cycles);
             _controllers->step(cycles);

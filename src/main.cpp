@@ -23,17 +23,17 @@ bool ParseCommandLine(int argc, char **argv, Config &config)
 
     auto result = options.parse(argc, argv);
 
-    if (result.count("help"))
-    {
-        std::cout << options.help() << std::endl;
-        return false;
-    }
     if (result.count("filename"))
         config._romfile = result["filename"].as<std::string>();
     config._screen_scale = result["screen_scale"].as<int>();
     if (result.count("record_file"))
         config._recordfile = result["record_file"].as<std::string>();
     config._audio_filter = result["audio_filter"].as<int>();
+    if (result.count("help") || config._romfile.empty ())
+    {
+        std::cout << options.help() << std::endl;
+        return false;
+    }
     return true;
 }
 
@@ -51,8 +51,6 @@ int main(int argc, char **argv)
 
     try
     {
-        // Configuration._romfile = "d:\\workspace\\gb_emu\\Super Mario Land (World).gb";
-        // Configuration._recordfile = "d:\\workspace\\gb_emu\\inputs.txt";
         if (!ParseCommandLine(argc, argv, Configuration))
             return (EXIT_SUCCESS);
         App.MainLoop(Configuration);

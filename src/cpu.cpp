@@ -73,7 +73,7 @@ void CPU::debug(uint32_t cycles)
     if (_registers.halt == 0)
     {
         FILE *f = stdout;
-	// fopen_s(&f, "log", "a+");
+
         fprintf(f, "%04X:", _registers.pc);
         fprintf(
             f, " A:%02x F:%02x B:%02x C:%02x D:%02x E:%02x H:%02x L:%02x LY:%02x SP:%04x  (Cy: %d) IF:%02x IE:%02x\n",

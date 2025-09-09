@@ -1,0 +1,32 @@
+## [0.1.0] - 2025-09-09
+- Integrated CMake for the build system
+- Integrated GoogleTest for unit testing
+- Integrated Debian packaging
+- Integrated SDL3 for display, audio, and controllers
+- APU: Support for 4 channels: 2 PWM, 1 PCM, 1 noise
+- APU: Output high-pass filter
+- CARTRIDGE: Support for MBC1 cartridges
+- CONTROLLER: Keyboard support
+- CONTROLLER: Gamepad support
+- CONTROLLER: Input replay from a record file
+- CPU: Simple instruction decoding
+- CPU: Complex instruction decoding
+- CPU: Interrupt handling
+- CPU: Instruction timing
+- CPU: Register loading from a save state
+- EMU: Configuration file reading and module initialization at startup
+- EMU: Sequenced module processing loop driven by the CPU
+- EMU: SDL3 event handling
+- EMU: Save state management
+- LCD: Display in an SDL3 window with configurable size
+- LCD: Implementation of display modes: 0, 1, 2, 3
+- LCD: Interrupt handling
+- LCD: Palette management for background and sprites
+- LCD: Texture loading
+- LCD: Sprite and background rendering
+- MAIN: Configuration options: file, screen size, audio filter, record file
+- MAIN: Command-line argument processing and emulator launch
+- RAM: Read and write operations for different RAM blocks
+- RAM: Writing to peripheral registers
+- TIMER: Support for 4 timer frequencies
+- TIMER: Management of DIV and TIMA registers
