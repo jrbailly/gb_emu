@@ -6,20 +6,35 @@
 #include "highpass_filter.h"
 #include "ifrontend.h"
 #include <SDL3/SDL.h>
+#include <map>
 
-class Frontend_SDL : public IFrontend
+class FrontendSDL : public IFrontend
 {
   public:
-    Frontend_SDL(const Config &config);
-    ~Frontend_SDL() override;
-    auto poll_inputs() -> bool override;
+    FrontendSDL(const Config &config);
+    ~FrontendSDL();
+    auto get_input(int &pad, int &button) -> bool override;
+    auto pop_save_request() -> bool override;
+    auto pop_load_request() -> bool override;
+    auto delay(int us) -> void override;
     auto play_audio(std::span<const int16_t> buffer) -> void override;
     auto display(const uint8_t *frame_buffer, int width, int height) -> void override;
+
+  private:
+    auto init_audio() -> void;
+    auto init_graphics() -> void;
+    auto init_controllers() -> void;
 
   private:
     bool _active_filter;
     SDL_AudioStream *_audio_stream;
     HighpassFilter _filter[CHANNELS];
+    int _dpads;
+    int _buttons;
+    std::map<int, int> _dpads_binding;
+    std::map<int, int> _buttons_binding;
+    bool _save_requested;
+    bool _load_requested;
 };
 
 #endif

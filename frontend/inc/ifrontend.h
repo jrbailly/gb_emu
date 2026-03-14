@@ -8,7 +8,10 @@ class IFrontend
 {
   public:
     virtual ~IFrontend() = default;
-    virtual auto poll_inputs() -> bool = 0;
+    virtual auto get_input(int &pad, int &button) -> bool = 0;
+    virtual auto pop_save_request() -> bool = 0;
+    virtual auto pop_load_request() -> bool = 0;
+    virtual auto delay(int us) -> void = 0;
     virtual auto play_audio(std::span<const int16_t> buffer) -> void = 0;
     virtual auto display(const uint8_t *frame_buffer, int width, int height) -> void = 0;
 };

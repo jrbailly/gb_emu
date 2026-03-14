@@ -1,10 +1,8 @@
 #include "emulator.h"
 #include <algorithm>
 #include <chrono>
-#include <cstdio>
 #include <fstream>
 #include <nlohmann/json.hpp>
-#include <thread>
 
 /**
  * @brief Construct a new Emulator object
@@ -31,7 +29,7 @@ auto Emulator::init() -> void
     _cartridge->load_rom(_ram);
     _cartridge->init(_ram);
     _apu->init(_ram);
-    _controllers->init(_ram, _config);
+    _controllers->init(_ram);
     _lcd->init(_ram);
     _timer->init(_ram);
     _lcd->set_scale(_config._screen_scale);
@@ -39,21 +37,19 @@ auto Emulator::init() -> void
 
 /**
  * @brief Runs one frame of emulation.
- * @return true if a quit event was received, false otherwise.
+ * @return Number of microseconds the caller should wait to maintain 60 FPS.
+ *         Returns 0 if the frame took longer than the target duration.
  */
-auto Emulator::step_frame() -> bool
+auto Emulator::step_frame() -> int
 {
     uint32_t cycles = 0;
 
     auto start_time = std::chrono::high_resolution_clock::now();
 
-    if (process_sdl_events())
-        return true;
     while (_cycles_count < frame_cycle_count)
     {
         cycles = _cpu->step();
         _apu->step(cycles);
-        _controllers->step(cycles);
         _lcd->step(cycles);
         _timer->step(_ram, cycles);
         _cycles_count += cycles;
@@ -62,46 +58,12 @@ auto Emulator::step_frame() -> bool
     _cycles_count -= frame_cycle_count;
     auto end_time = std::chrono::high_resolution_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
-    SDL_DelayPrecise(1000.0 * (frame_duration - elapsed));
-    return false;
+    return (frame_duration - elapsed);
 }
 
-/**
- * @brief Process sdl events
- *
- */
-auto Emulator::process_sdl_events() -> bool
+auto Emulator::set_input(int pad, int button) -> void
 {
-    SDL_Event event;
-
-    while (::SDL_PollEvent(&event) != 0)
-    {
-        switch (event.type)
-        {
-        case SDL_EVENT_QUIT:
-            return (true);
-            break;
-        case SDL_EVENT_KEY_DOWN:
-            _controllers->setInput(event.key.key, event.key.down);
-            if (event.key.key == SDLK_F1)
-                save_state();
-            if (event.key.key == SDLK_F2)
-                load_state();
-            break;
-        case SDL_EVENT_KEY_UP:
-            _controllers->setInput(event.key.key, event.key.down);
-            break;
-        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-            _controllers->setInput(event.gbutton.button, event.gbutton.down);
-            break;
-        case SDL_EVENT_GAMEPAD_BUTTON_UP:
-            _controllers->setInput(event.gbutton.button, event.gbutton.down);
-            break;
-        default:
-            break;
-        }
-    }
-    return (false);
+    _controllers->set_input(pad, button);
 }
 
 auto Emulator::save_state() -> void

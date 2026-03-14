@@ -20,16 +20,14 @@ class Emulator
   public:
     Emulator(const Config &Configuration);
     auto init() -> void;
-    auto step_frame() -> bool;
+    auto step_frame() -> int;
+    auto set_input(int pad, int button) -> void;
+    auto save_state() -> void;
+    auto load_state() -> void;
     inline auto get_audio_buffer() const -> APU::AudioView
     {
         return _apu->get_audio_buffer();
     }
-
-  private:
-    auto process_sdl_events() -> bool;
-    auto save_state() -> void;
-    auto load_state() -> void;
 
   private:
     RamBus _ram;

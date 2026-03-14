@@ -1,20 +1,44 @@
 #include "application.h"
 #include "frontend_sdl.h"
+#include "vbm_record.h"
 #include <SDL3/SDL.h>
 #include <format>
 
 Application::Application()
 {
-    if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS))
-        throw std::runtime_error(std::format("SDL_Init : {}", SDL_GetError()));
 }
 
-auto Application::MainLoop(const Config &Configuration) -> void
+auto Application::Init(const Config &Configuration) -> void
 {
-    mFrontend = std::make_unique<Frontend_SDL>(Configuration);
+    mFrontend = std::make_unique<FrontendSDL>(Configuration);
     mEmulator = std::make_unique<Emulator>(Configuration);
     mEmulator->init();
-    while (!mEmulator->step_frame())
-        mFrontend->play_audio(mEmulator->get_audio_buffer());
-    SDL_Quit();
+    if (!Configuration._recordfile.empty())
+    {
+        mRecord = std::make_unique<VbmRecord>();
+        mRecord->parse_file(Configuration._recordfile);
+    }
+}
+
+auto Application::MainLoop() -> void
+{
+    int pad = 0;
+    int button = 0;
+
+    while (!mQuit)
+    {
+        mQuit = mFrontend->get_input(pad, button);
+        if (mRecord)
+            mRecord->get_input(pad, button);
+        if (mFrontend->pop_save_request())
+            mEmulator->save_state();
+        if (mFrontend->pop_load_request())
+            mEmulator->load_state();
+        if (!mQuit)
+        {
+            mEmulator->set_input(pad, button);
+            mFrontend->delay(mEmulator->step_frame());
+            mFrontend->play_audio(mEmulator->get_audio_buffer());
+        }
+    }
 }

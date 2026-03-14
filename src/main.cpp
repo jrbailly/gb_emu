@@ -29,7 +29,7 @@ bool ParseCommandLine(int argc, char **argv, Config &config)
     if (result.count("record_file"))
         config._recordfile = result["record_file"].as<std::string>();
     config._audio_filter = result["audio_filter"].as<int>();
-    if (result.count("help") || config._romfile.empty ())
+    if (result.count("help") || config._romfile.empty())
     {
         std::cout << options.help() << std::endl;
         return false;
@@ -53,7 +53,8 @@ int main(int argc, char **argv)
     {
         if (!ParseCommandLine(argc, argv, Configuration))
             return (EXIT_SUCCESS);
-        App.MainLoop(Configuration);
+        App.Init(Configuration);
+        App.MainLoop();
     }
     catch (const std::exception &e)
     {
