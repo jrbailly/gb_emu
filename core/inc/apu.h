@@ -1,9 +1,9 @@
 #ifndef _APU_H_
 #define _APU_H_
-#include "config.h"
 #include "cpu.h"
-#include "highpass_filter.h"
-#include <SDL3/SDL.h>
+#include <array>
+#include <cstdint>
+#include <span>
 
 static constexpr float APU_FREQ = CPU_FREQ / 4.0;
 static constexpr float SAMPLERATE = 44100;
@@ -58,14 +58,20 @@ class APU
         NR52 = 0xFF26,
         WAVE_RAM = 0xFF30,
     };
+    using AudioBuffer = std::array<int16_t, AUDIO_BUFFER_SIZE * CHANNELS>;
+    using AudioView = std::span<const int16_t>;
+
     APU(RamBus &ram);
-    auto init(RamBus &ram, const Config &config) -> void;
+    auto init(RamBus &ram) -> void;
     auto step(uint32_t cycles_count) -> void;
     auto flush() -> void;
     auto load_state() -> void;
+    inline auto get_audio_buffer() const -> AudioView
+    {
+        return AudioView{_buffer.data(), static_cast<std::size_t>(_audio_ready_size)};
+    }
 
   private:
-    auto init_sdl() -> void;
     auto process_ch1() -> void;
     auto process_ch2() -> void;
     auto process_ch3() -> void;
@@ -79,7 +85,6 @@ class APU
     auto update_enveloppe() -> void;
     auto update_timer() -> void;
     auto mixer() -> void;
-    auto filter() -> void;
 
   private:
     RamBus &_ram;
@@ -87,13 +92,11 @@ class APU
     int _timer_cycle;
     int _timer_count;
     int _buffer_index;
-    bool _active_filter;
+    int _audio_ready_size;
     uint16_t _lfsr;
-    SDL_AudioStream *_audio_stream;
-    HighpassFilter _filter[CHANNELS];
     std::array<float, 4> _duty_cycles;
     std::array<Channel, 4> _channels;
-    std::array<int16_t, AUDIO_BUFFER_SIZE * CHANNELS> _buffer;
+    AudioBuffer _buffer;
 };
 
 #endif

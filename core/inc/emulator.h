@@ -20,7 +20,11 @@ class Emulator
   public:
     Emulator(const Config &Configuration);
     auto init() -> void;
-    auto loop() -> void;
+    auto step_frame() -> bool;
+    inline auto get_audio_buffer() const -> APU::AudioView
+    {
+        return _apu->get_audio_buffer();
+    }
 
   private:
     auto process_sdl_events() -> bool;
@@ -36,6 +40,7 @@ class Emulator
     std::unique_ptr<LCD> _lcd;
     std::unique_ptr<Timer> _timer;
     const Config _config;
+    uint32_t _cycles_count;
 };
 
 #endif

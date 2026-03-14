@@ -12,6 +12,7 @@ APU::APU(RamBus &ram) : _ram(ram)
     _timer_cycle = TIMER_PERIOD;
     _timer_count = 0;
     _buffer_index = 0;
+    _audio_ready_size = 0;
     _duty_cycles[0] = 0.12;
     _duty_cycles[1] = 0.25;
     _duty_cycles[2] = 0.5;
@@ -27,27 +28,10 @@ APU::APU(RamBus &ram) : _ram(ram)
 }
 
 /**
- * @brief Initializes the SDL audio system for sound output.
- */
-auto APU::init_sdl() -> void
-{
-    SDL_AudioSpec spec;
-
-    spec.format = SDL_AUDIO_S16;
-    spec.channels = CHANNELS;
-    spec.freq = SAMPLERATE;
-    _audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
-    if (!_audio_stream)
-        throw std::runtime_error(std::format("SDL_OpenAudioDeviceStream : {}", SDL_GetError()));
-    if (!SDL_ResumeAudioStreamDevice(_audio_stream))
-        throw std::runtime_error(std::format("SDL_ResumeAudioStreamDevice : {}", +SDL_GetError()));
-}
-
-/**
  * @brief Initializes the APU by registering memory callbacks for sound control registers.
  * @param ram Reference to the RamBus object for registering callbacks.
  */
-auto APU::init(RamBus &ram, const Config &config) -> void
+auto APU::init(RamBus &ram) -> void
 {
     int reg = Register::NR14;
     for (int i = 0; i < 4; ++i)
@@ -62,8 +46,6 @@ auto APU::init(RamBus &ram, const Config &config) -> void
         if ((val & 0x80) == 0)
             ram.write_register(NR52, ram[NR52] & ~(1 << 3));
     });
-    init_sdl();
-    _active_filter = config._audio_filter;
 }
 
 /**
@@ -96,14 +78,11 @@ auto APU::step(uint32_t cycles_count) -> void
 }
 
 /**
- * @brief Flushes the current audio buffer to the SDL audio stream and performs DC removal.
+ * @brief Finalizes the audio buffer for the current frame.
  */
 auto APU::flush() -> void
 {
-    if (_active_filter)
-        filter();
-    if (!SDL_PutAudioStreamData(_audio_stream, _buffer.data(), _buffer_index * sizeof(int16_t)))
-        throw std::runtime_error(std::format("SDL_PutAudioStreamData : {}", SDL_GetError()));
+    _audio_ready_size = _buffer_index;
     _buffer_index = 0;
 }
 
@@ -366,13 +345,4 @@ auto APU::mixer() -> void
     _buffer[_buffer_index] = -(value[1] * 16.0);
     _buffer[_buffer_index + 1] = -(value[0] * 16.0);
     _buffer_index = (_buffer_index + 2) % AUDIO_BUFFER_SIZE;
-}
-
-/**
- * @brief Removes the DC offset from the audio buffer using a high-pass filter.
- */
-auto APU::filter() -> void
-{
-    for (int channel = 0; channel < CHANNELS; ++channel)
-        _filter[channel].filter(_buffer.data() + channel, _buffer_index, CHANNELS);
 }

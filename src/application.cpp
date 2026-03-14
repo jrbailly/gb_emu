@@ -1,4 +1,5 @@
 #include "application.h"
+#include "frontend_sdl.h"
 #include <SDL3/SDL.h>
 #include <format>
 
@@ -10,8 +11,10 @@ Application::Application()
 
 auto Application::MainLoop(const Config &Configuration) -> void
 {
+    mFrontend = std::make_unique<Frontend_SDL>(Configuration);
     mEmulator = std::make_unique<Emulator>(Configuration);
     mEmulator->init();
-    mEmulator->loop();
+    while (!mEmulator->step_frame())
+        mFrontend->play_audio(mEmulator->get_audio_buffer());
     SDL_Quit();
 }
