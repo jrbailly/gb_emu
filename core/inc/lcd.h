@@ -3,7 +3,8 @@
 
 #include "cpu.h"
 #include "ram.h"
-#include <SDL3/SDL.h>
+#include <array>
+#include <span>
 
 static constexpr int screen_width = 160;
 static constexpr int screen_height = 144;
@@ -99,13 +100,13 @@ class LCD
     virtual ~LCD();
     auto init(RamBus &ram) -> void;
     auto step(int cycles_count) -> void;
-    auto set_scale(int scale) -> void;
     auto load_state() -> void;
-    auto renderer() -> void;
+    auto get_frame_buffer() const -> std::span<const uint32_t>
+    {
+        return _framebuffer_ready;
+    }
 
   private:
-    auto create_window() -> void;
-    auto destroy_window() -> void;
     auto scanline() -> void;
     auto update_stat() -> void;
     auto update_BGP0() -> void;
@@ -121,13 +122,11 @@ class LCD
     RamBus &_ram;
     bool _stat_interrupt;
     int _next_ly;
-    int _scale;
     int _next_op_cycle;
     Mode _current_mode;
     Mode _next_mode;
-    SDL_Window *_window;
-    SDL_Renderer *_renderer;
-    SDL_Texture *_texture_viewer;
+    std::array<uint32_t, (screen_width + texture_padding) * screen_height> _framebuffer;
+    std::array<uint32_t, (screen_width + texture_padding) * screen_height> _framebuffer_ready;
     unsigned int _BGP0[4];
     unsigned int _OBP0[4];
     unsigned int _OBP1[4];

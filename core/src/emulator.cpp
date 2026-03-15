@@ -32,7 +32,6 @@ auto Emulator::init() -> void
     _controllers->init(_ram);
     _lcd->init(_ram);
     _timer->init(_ram);
-    _lcd->set_scale(_config._screen_scale);
 }
 
 /**

@@ -1,6 +1,5 @@
 #include "lcd.h"
 #include "ram.h"
-#include <cstdio>
 #include <format>
 #include <functional>
 
@@ -15,7 +14,6 @@ LCD::LCD(RamBus &ram) : _ram(ram)
 {
     _stat_interrupt = false;
     _next_ly = 0;
-    _scale = 1;
     _current_mode = Mode::MODE2;
     _next_mode = Mode::MODE2;
     _colors[GrayLevel::TRANSPARENT] = 0x0;
@@ -27,8 +25,6 @@ LCD::LCD(RamBus &ram) : _ram(ram)
     _BGP0[1] = _colors[GrayLevel::LIGHT_GRAY];
     _BGP0[2] = _colors[GrayLevel::DARK_GRAY];
     _BGP0[3] = _colors[GrayLevel::BLACK];
-    _window = nullptr;
-    _renderer = nullptr;
     _reload_surface = true;
     _reload_sprite = true;
     _reload_background = true;
@@ -49,47 +45,6 @@ LCD::LCD(RamBus &ram) : _ram(ram)
  */
 LCD::~LCD()
 {
-    destroy_window();
-}
-
-/**
- * @brief Create a new window for the LCD
- *
- * Sets up an SDL window, renderer, and textures for sprites and background rendering.
- * Throws an exception if any SDL operation fails.
- */
-auto LCD::create_window() -> void
-{
-    destroy_window();
-    _window = SDL_CreateWindow("", _scale * screen_width, _scale * screen_height, 0);
-    if (!_window)
-        throw std::runtime_error(std::format("SDL_CreateWindow : {}", SDL_GetError()));
-    _renderer = SDL_CreateRenderer(_window, NULL);
-    if (!_renderer)
-        throw std::runtime_error(std::format("SDL_CreateRenderer : {}", SDL_GetError()));
-    _texture_viewer = SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING,
-                                        screen_width + texture_padding, screen_height);
-    if (!_texture_viewer)
-        throw std::runtime_error(std::format("SDL_CreateTexture : {}", SDL_GetError()));
-    if (!SDL_SetRenderDrawColor(_renderer, 255, 255, 255, 255))
-        throw std::runtime_error(std::format("SDL_SetRenderDrawColor : {}", SDL_GetError()));
-    if (!SDL_SetTextureScaleMode(_texture_viewer, SDL_SCALEMODE_NEAREST))
-        throw std::runtime_error(std::format("SDL_SetTextureScaleMode : {}", SDL_GetError()));
-}
-
-/**
- * @brief Destroy the window and associated resources
- *
- * Frees the SDL window, renderer, and texture resources if they exist.
- */
-auto LCD::destroy_window() -> void
-{
-    if (_window)
-        SDL_DestroyWindow(_window);
-    if (_renderer)
-        SDL_DestroyRenderer(_renderer);
-    if (_texture_viewer)
-        SDL_DestroyTexture(_texture_viewer);
 }
 
 /**
@@ -114,7 +69,6 @@ auto LCD::init(RamBus &ram) -> void
         _sprite_change[index] = 1;
         _reload_surface = true;
     });
-    create_window();
 }
 
 /**
@@ -159,7 +113,7 @@ auto LCD::step(int cycles_count) -> void
                 _next_ly = (ly + 1) % max_lines;
                 if ((ly + 1) == max_lines)
                 {
-                    renderer();
+                    _framebuffer_ready = _framebuffer;
                     _next_mode = Mode::MODE2;
                 }
                 break;
@@ -174,42 +128,6 @@ auto LCD::step(int cycles_count) -> void
         _next_op_cycle = 0;
         _next_ly = 0;
     }
-}
-
-/**
- * @brief Render the current frame if LCD is enabled
- *
- * Updates the display by scaling, presenting, and clearing the renderer.
- * Throws an exception if SDL operations fail.
- */
-auto LCD::renderer() -> void
-{
-    SDL_FRect src(texture_offset, 0, screen_width, screen_height);
-
-    if (!SDL_RenderTexture(_renderer, _texture_viewer, &src, NULL))
-        throw std::runtime_error(std::format("SDL_RenderTexture : {}", SDL_GetError()));
-    if (!SDL_SetRenderScale(_renderer, _scale, _scale))
-        throw std::runtime_error(std::format("SDL_SetRenderScale : {}", SDL_GetError()));
-    if (!SDL_FlushRenderer(_renderer))
-        throw std::runtime_error(std::format("SDL_FlushRenderer : {}", SDL_GetError()));
-    if (!SDL_RenderPresent(_renderer))
-        throw std::runtime_error(std::format("SDL_RenderPresent : {}", SDL_GetError()));
-    if (!SDL_RenderClear(_renderer))
-        throw std::runtime_error(std::format("SDL_RenderClear : {}", SDL_GetError()));
-}
-
-/**
- * @brief Set the scale of the LCD window
- *
- * Updates the display scale and recreates the window accordingly.
- *
- * @param scale The new scale factor for the window
- */
-auto LCD::set_scale(int scale) -> void
-{
-    _scale = scale;
-    destroy_window();
-    create_window();
 }
 
 /**
@@ -244,19 +162,14 @@ auto LCD::scanline() -> void
     }
     if (_ram[Register::LCDC] & LCD_ENABLE)
     {
-        uint32_t *datas = nullptr;
-        int pitch = 0;
-        SDL_Rect rect{0, _ram[LY], screen_width + texture_padding, 1};
+        uint32_t *datas = _framebuffer.data() + _ram[LY] * (screen_width + texture_padding);
 
-        if (!SDL_LockTexture(_texture_viewer, &rect, (void **)&(datas), &pitch))
-            throw std::runtime_error(std::format("SDL_LockTexture : {}", SDL_GetError()));
         if (_ram[Register::LCDC] & WIN_ENABLE)
             display_window_line = draw_window_line(datas);
         if (_ram[Register::LCDC] & BG_ENABLE && !display_window_line)
             draw_background_line(datas);
         if (_ram[Register::LCDC] & OBJ_ENABLE)
             draw_sprites(datas);
-        SDL_UnlockTexture(_texture_viewer);
     }
 }
 

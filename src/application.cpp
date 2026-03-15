@@ -39,6 +39,7 @@ auto Application::MainLoop() -> void
             mEmulator->set_input(pad, button);
             mFrontend->delay(mEmulator->step_frame());
             mFrontend->play_audio(mEmulator->get_audio_buffer());
+            mFrontend->render(mEmulator->get_frame_buffer());
         }
     }
 }

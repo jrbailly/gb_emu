@@ -9,7 +9,7 @@
  */
 FrontendSDL::FrontendSDL(const Config &config)
     : _active_filter(config._audio_filter), _audio_stream(nullptr), _dpads(0xF), _buttons(0xF), _save_requested(false),
-      _load_requested(false)
+      _load_requested(false), _scale(config._screen_scale)
 {
     if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS))
         throw std::runtime_error(std::format("SDL_Init : {}", SDL_GetError()));
@@ -36,10 +36,24 @@ auto FrontendSDL::init_audio() -> void
 }
 
 /**
- * @brief Initializes the graphical subsystem. Not implemented yet.
+ * @brief Initializes the graphical subsystem: window, renderer, and streaming texture.
  */
 auto FrontendSDL::init_graphics() -> void
 {
+    _window = SDL_CreateWindow("", _scale * screen_width, _scale * screen_height, 0);
+    if (!_window)
+        throw std::runtime_error(std::format("SDL_CreateWindow : {}", SDL_GetError()));
+    _renderer = SDL_CreateRenderer(_window, NULL);
+    if (!_renderer)
+        throw std::runtime_error(std::format("SDL_CreateRenderer : {}", SDL_GetError()));
+    _texture_viewer = SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING,
+                                        screen_width + texture_padding, screen_height);
+    if (!_texture_viewer)
+        throw std::runtime_error(std::format("SDL_CreateTexture : {}", SDL_GetError()));
+    if (!SDL_SetRenderDrawColor(_renderer, 255, 255, 255, 255))
+        throw std::runtime_error(std::format("SDL_SetRenderDrawColor : {}", SDL_GetError()));
+    if (!SDL_SetTextureScaleMode(_texture_viewer, SDL_SCALEMODE_NEAREST))
+        throw std::runtime_error(std::format("SDL_SetTextureScaleMode : {}", SDL_GetError()));
 }
 
 /**
@@ -70,6 +84,12 @@ auto FrontendSDL::init_controllers() -> void
  */
 FrontendSDL::~FrontendSDL()
 {
+    if (_texture_viewer)
+        SDL_DestroyTexture(_texture_viewer);
+    if (_renderer)
+        SDL_DestroyRenderer(_renderer);
+    if (_window)
+        SDL_DestroyWindow(_window);
     if (_audio_stream)
     {
         SDL_DestroyAudioStream(_audio_stream);
@@ -182,11 +202,27 @@ auto FrontendSDL::play_audio(std::span<const int16_t> buffer) -> void
 }
 
 /**
- * @brief Not implemented in this step.
+ * @brief Uploads the framebuffer into the SDL texture and presents it.
+ * @param frame_buffer View of the LCD framebuffer (width = screen_width + texture_padding, height = screen_height).
  */
-auto FrontendSDL::display(const uint8_t *frame_buffer, int width, int height) -> void
+auto FrontendSDL::render(std::span<const uint32_t> frame_buffer) -> void
 {
-    (void)frame_buffer;
-    (void)width;
-    (void)height;
+    void *pixels = nullptr;
+    int pitch = 0;
+
+    if (!SDL_LockTexture(_texture_viewer, nullptr, &pixels, &pitch))
+        throw std::runtime_error(std::format("SDL_LockTexture : {}", SDL_GetError()));
+    std::copy(frame_buffer.begin(), frame_buffer.end(), static_cast<uint32_t *>(pixels));
+    SDL_UnlockTexture(_texture_viewer);
+    SDL_FRect src(texture_offset, 0, screen_width, screen_height);
+    if (!SDL_SetRenderScale(_renderer, _scale, _scale))
+        throw std::runtime_error(std::format("SDL_SetRenderScale : {}", SDL_GetError()));
+    if (!SDL_RenderTexture(_renderer, _texture_viewer, &src, NULL))
+        throw std::runtime_error(std::format("SDL_RenderTexture : {}", SDL_GetError()));
+    if (!SDL_FlushRenderer(_renderer))
+        throw std::runtime_error(std::format("SDL_FlushRenderer : {}", SDL_GetError()));
+    if (!SDL_RenderPresent(_renderer))
+        throw std::runtime_error(std::format("SDL_RenderPresent : {}", SDL_GetError()));
+    if (!SDL_RenderClear(_renderer))
+        throw std::runtime_error(std::format("SDL_RenderClear : {}", SDL_GetError()));
 }

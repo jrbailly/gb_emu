@@ -2,7 +2,6 @@
 #define _CONTROLLERS_H_
 
 #include "ram.h"
-#include <SDL3/SDL.h>
 #include <map>
 
 class Controllers

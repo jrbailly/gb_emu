@@ -5,6 +5,7 @@
 #include "config.h"
 #include "highpass_filter.h"
 #include "ifrontend.h"
+#include "lcd.h"
 #include <SDL3/SDL.h>
 #include <map>
 
@@ -18,7 +19,7 @@ class FrontendSDL : public IFrontend
     auto pop_load_request() -> bool override;
     auto delay(int us) -> void override;
     auto play_audio(std::span<const int16_t> buffer) -> void override;
-    auto display(const uint8_t *frame_buffer, int width, int height) -> void override;
+    auto render(std::span<const uint32_t> frame_buffer) -> void override;
 
   private:
     auto init_audio() -> void;
@@ -28,6 +29,9 @@ class FrontendSDL : public IFrontend
   private:
     bool _active_filter;
     SDL_AudioStream *_audio_stream;
+    SDL_Window *_window = nullptr;
+    SDL_Renderer *_renderer = nullptr;
+    SDL_Texture *_texture_viewer = nullptr;
     HighpassFilter _filter[CHANNELS];
     int _dpads;
     int _buttons;
@@ -35,6 +39,7 @@ class FrontendSDL : public IFrontend
     std::map<int, int> _buttons_binding;
     bool _save_requested;
     bool _load_requested;
+    int _scale;
 };
 
 #endif
