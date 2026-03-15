@@ -9,6 +9,7 @@ static constexpr int screen_width = 160;
 static constexpr int screen_height = 144;
 static constexpr int tile_maps_width = 256;
 static constexpr int tile_maps_height = 256;
+static constexpr int tile_maps_size = 32;
 static constexpr int tiles_width = 8;
 static constexpr int tiles_height = 8;
 static constexpr int max_tiles = 512;
@@ -20,6 +21,8 @@ static constexpr int cycles_mode3 = 172;
 static constexpr int cycles_mode0 = 204;
 static constexpr int cycles_per_line = 456;
 static constexpr int max_lines = 154;
+static constexpr int texture_padding = 2 * tiles_width;
+static constexpr int texture_offset = tiles_width;
 
 class LCD
 {
@@ -110,10 +113,9 @@ class LCD
     auto update_OBP1() -> void;
     auto load_texture_sprites() -> void;
     auto load_texture_background() -> void;
-    auto draw_sprites(bool priority) -> void;
-    auto draw_background_line() -> void;
-    auto draw_window_line() -> bool;
-    auto draw_background_tiles() -> bool;
+    auto draw_sprites(uint32_t *datas) -> void;
+    auto draw_background_line(uint32_t *datas) -> void;
+    auto draw_window_line(uint32_t *datas) -> bool;
 
   private:
     RamBus &_ram;
@@ -125,9 +127,7 @@ class LCD
     Mode _next_mode;
     SDL_Window *_window;
     SDL_Renderer *_renderer;
-    SDL_Texture *_texture_sprites;
-    SDL_Texture *_texture_background;
-    // SDL_Texture *_texture_viewer;
+    SDL_Texture *_texture_viewer;
     unsigned int _BGP0[4];
     unsigned int _OBP0[4];
     unsigned int _OBP1[4];
@@ -138,6 +138,8 @@ class LCD
     std::array<int, 4> _mode_cyles;
     std::array<int, max_tiles> _background_change;
     std::array<int, max_tiles> _sprite_change;
+    std::array<std::array<std::array<int, tiles_height>, line_width>, 384> _texture_sprites;
+    std::array<std::array<std::array<int, tiles_height>, line_width>, 384> _texture_background;
 };
 
 #endif
