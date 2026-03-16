@@ -36,6 +36,7 @@ LCD::LCD(RamBus &ram) : _ram(ram)
     _background_change.fill(0);
     _sprite_change.fill(0);
     _ram.write_register(Register::LY, 0);
+    _ram.write_register(Register::LCDC, 0x91);
 }
 
 /**

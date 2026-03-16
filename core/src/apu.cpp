@@ -144,6 +144,8 @@ auto APU::process_ch3() -> void
     int16_t value = 0;
 
     index = _channels[2].phase * PCM_SAMPLES;
+    if (index > PCM_SAMPLES)
+        index = PCM_SAMPLES;
     if ((index % 2) == 0)
         value = (_ram[WAVE_RAM + (index / 2)] >> 4) & 0xF;
     else

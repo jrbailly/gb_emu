@@ -101,7 +101,7 @@ class LCD
     auto init(RamBus &ram) -> void;
     auto step(int cycles_count) -> void;
     auto load_state() -> void;
-    auto get_frame_buffer() const -> std::span<const uint32_t>
+    inline auto get_frame_buffer() const -> std::span<const uint32_t>
     {
         return _framebuffer_ready;
     }
@@ -125,8 +125,6 @@ class LCD
     int _next_op_cycle;
     Mode _current_mode;
     Mode _next_mode;
-    std::array<uint32_t, (screen_width + texture_padding) * screen_height> _framebuffer;
-    std::array<uint32_t, (screen_width + texture_padding) * screen_height> _framebuffer_ready;
     unsigned int _BGP0[4];
     unsigned int _OBP0[4];
     unsigned int _OBP1[4];
@@ -139,6 +137,8 @@ class LCD
     std::array<int, max_tiles> _sprite_change;
     std::array<std::array<std::array<int, tiles_height>, line_width>, 384> _texture_sprites;
     std::array<std::array<std::array<int, tiles_height>, line_width>, 384> _texture_background;
+    std::array<uint32_t, (screen_width + texture_padding) * screen_height> _framebuffer;
+    std::array<uint32_t, (screen_width + texture_padding) * screen_height> _framebuffer_ready;
 };
 
 #endif
