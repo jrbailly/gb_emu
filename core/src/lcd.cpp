@@ -13,6 +13,7 @@
 LCD::LCD(RamBus &ram) : _ram(ram)
 {
     _stat_interrupt = false;
+    _update_interrupt = false;
     _next_ly = 0;
     _current_mode = Mode::MODE2;
     _next_mode = Mode::MODE2;
@@ -86,6 +87,8 @@ auto LCD::step(int cycles_count) -> void
     if (_ram[Register::LCDC] & LCD_ENABLE)
     {
         _next_op_cycle -= cycles_count;
+        if (_update_interrupt)
+            update_interrupt();
         if (_next_op_cycle <= 0)
         {
             _current_mode = _next_mode;
@@ -120,6 +123,10 @@ auto LCD::step(int cycles_count) -> void
                 break;
             }
             update_stat();
+            if (_next_op_cycle > -4)
+                _update_interrupt = true;
+            else
+                update_interrupt();
         }
     }
     else
@@ -137,6 +144,8 @@ auto LCD::step(int cycles_count) -> void
  */
 auto LCD::load_state() -> void
 {
+    _reload_sprite = true;
+    _reload_background = true;
     update_BGP0();
     update_OBP0();
     update_OBP1();
@@ -184,14 +193,28 @@ auto LCD::update_stat() -> void
     unsigned char stat = _ram[Register::STAT];
     unsigned char ly = _ram[Register::LY];
     unsigned char lyc = _ram[Register::LYC];
+
+    stat = (stat & 0xFC) | _current_mode;
+    if (ly == lyc)
+        stat |= LYC_LY;
+    _ram.write_register(Register::STAT, stat);
+}
+
+/**
+ * @brief Update the IF register to handle interrupts
+ *
+ * Updates the IF register based on the current and current line.
+ */
+auto LCD::update_interrupt() -> void
+{
+    unsigned char stat = _ram[Register::STAT];
+    unsigned char ly = _ram[Register::LY];
+    unsigned char lyc = _ram[Register::LYC];
     unsigned char interrupt = _ram[CPU::Register::IF];
     bool stat_interrupt = false;
 
     if (ly == screen_height)
         interrupt |= 0x1;
-    stat = (stat & 0xFC) | _current_mode;
-    if (ly == lyc)
-        stat |= LYC_LY;
     if ((stat & MODE0_INT) && _current_mode == Mode::MODE0)
         stat_interrupt = true;
     if ((stat & MODE1_INT) && _current_mode == Mode::MODE1)
@@ -204,7 +227,6 @@ auto LCD::update_stat() -> void
         interrupt |= 0x2;
     _stat_interrupt = stat_interrupt;
     _ram.write_register(CPU::Register::IF, interrupt);
-    _ram.write_register(Register::STAT, stat);
 }
 
 /**
@@ -431,9 +453,11 @@ auto LCD::draw_window_line(uint32_t *datas) -> bool
     int address = BackgroundAddress::AREA0;
     int line = _ram[LY];
     int y = line - _ram[WY];
-    int x = 0;
+    int x = _ram[WX] - 7;
+    int x_offset = x % tiles_width;
     int value;
     int index;
+    int index_address = 0;
     bool show_tile = false;
 
     if (_ram[Register::LCDC] & WIN_TILE_AREA)
@@ -442,15 +466,15 @@ auto LCD::draw_window_line(uint32_t *datas) -> bool
     if (y >= 0)
     {
         y %= tiles_height;
-        for (int dst_x = (_ram[WX] / tiles_width) - 1; dst_x <= 20; ++dst_x)
+        for (int dst_x = (x / tiles_width); dst_x <= 20; ++dst_x)
         {
-            value = _ram[address + (x / tiles_width)];
+            value = _ram[address + index_address++];
             if (value < 128 && (_ram[Register::LCDC] & BG_DATA_AREA) == 0)
                 value += 256;
-            index = texture_offset + dst_x * tiles_width;
+            index = texture_offset + dst_x * tiles_width - x_offset;
             for (int i = 0; i < tiles_width; ++i)
                 datas[index++] = _BGP0[_texture_background[value][i][y]];
-            x = (x + tiles_width) % tile_maps_width;
+            index_address %= (tile_maps_width / tiles_width);
             show_tile = true;
         }
     }

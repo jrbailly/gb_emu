@@ -109,6 +109,7 @@ class LCD
   private:
     auto scanline() -> void;
     auto update_stat() -> void;
+    auto update_interrupt() -> void;
     auto update_BGP0() -> void;
     auto update_OBP0() -> void;
     auto update_OBP1() -> void;
@@ -121,6 +122,7 @@ class LCD
   private:
     RamBus &_ram;
     bool _stat_interrupt;
+    bool _update_interrupt;
     int _next_ly;
     int _next_op_cycle;
     Mode _current_mode;

@@ -75,11 +75,13 @@ void CPU::debug(uint32_t cycles)
         FILE *f = stdout;
 
         fprintf(f, "%04X:", _registers.pc);
-        fprintf(
-            f, " A:%02x F:%02x B:%02x C:%02x D:%02x E:%02x H:%02x L:%02x LY:%02x SP:%04x  (Cy: %d) IF:%02x IE:%02x\n",
-            _registers.regs8[Reg8::A], _registers.regs8[Reg8::F], _registers.regs8[Reg8::B], _registers.regs8[Reg8::C],
-            _registers.regs8[Reg8::D], _registers.regs8[Reg8::E], _registers.regs8[Reg8::H], _registers.regs8[Reg8::L],
-            _ram[0xFF44], _registers.sp, cycles, _ram[Register::IF], _ram[Register::IE]);
+        fprintf(f,
+                " A:%02x F:%02x B:%02x C:%02x D:%02x E:%02x H:%02x L:%02x LY:%02x SP:%04x  (Cy: %d) IF:%02x IE:%02x "
+                "LY:%d\n",
+                _registers.regs8[Reg8::A], _registers.regs8[Reg8::F], _registers.regs8[Reg8::B],
+                _registers.regs8[Reg8::C], _registers.regs8[Reg8::D], _registers.regs8[Reg8::E],
+                _registers.regs8[Reg8::H], _registers.regs8[Reg8::L], _ram[0xFF44], _registers.sp, cycles,
+                _ram[Register::IF], _ram[Register::IE], (int)_ram[0xFF44]);
         fclose(f);
     }
 }
@@ -667,8 +669,7 @@ uint8_t CPU::decode()
             cycles_count = 2;
         break;
     case (0xd9):
-        ei();
-        ret();
+        reti();
         cycles_count = 4;
         break;
     case (0xc7):
@@ -1641,6 +1642,17 @@ inline void CPU::ret()
     _registers.pc = addr;
 }
 
+/**
+ * @brief Returns from a subroutine by popping the PC from the stack.
+ */
+inline void CPU::reti()
+{
+    uint16_t addr = _ram[_registers.sp++];
+
+    addr |= _ram[_registers.sp++] << 8;
+    _registers.pc = addr;
+    _registers.ime = 1;
+}
 /**
  * @brief Performs a conditional return based on the opcode and current flags.
  * @param opcode The opcode determining the condition.
