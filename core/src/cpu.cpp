@@ -82,7 +82,6 @@ void CPU::debug(uint32_t cycles)
                 _registers.regs8[Reg8::C], _registers.regs8[Reg8::D], _registers.regs8[Reg8::E],
                 _registers.regs8[Reg8::H], _registers.regs8[Reg8::L], _ram[0xFF44], _registers.sp, cycles,
                 _ram[Register::IF], _ram[Register::IE], (int)_ram[0xFF44]);
-        fclose(f);
     }
 }
 
@@ -1652,6 +1651,7 @@ inline void CPU::reti()
     addr |= _ram[_registers.sp++] << 8;
     _registers.pc = addr;
     _registers.ime = 1;
+    _active_interruption = false;
 }
 /**
  * @brief Performs a conditional return based on the opcode and current flags.

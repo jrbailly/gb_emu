@@ -17,6 +17,7 @@ static constexpr int max_tiles = 512;
 static constexpr int line_width = max_tiles * tiles_width;
 static constexpr int oam_size = 160;
 static constexpr int tiles_memory_size = 0x1800;
+static constexpr int cycles_intr = 4;
 static constexpr int cycles_mode2 = 80;
 static constexpr int cycles_mode3 = 172;
 static constexpr int cycles_mode0 = 204;
@@ -87,6 +88,8 @@ class LCD
         MODE1,
         MODE2,
         MODE3,
+        INTR,
+        INIT,
     };
     enum GrayLevel
     {
@@ -122,9 +125,9 @@ class LCD
   private:
     RamBus &_ram;
     bool _stat_interrupt;
-    bool _update_interrupt;
-    int _next_ly;
-    int _next_op_cycle;
+    bool _lcd_enable;
+    int _op_cycle;
+    int _current_op_cycle;
     Mode _current_mode;
     Mode _next_mode;
     unsigned int _BGP0[4];

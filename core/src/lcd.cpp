@@ -13,9 +13,7 @@
 LCD::LCD(RamBus &ram) : _ram(ram)
 {
     _stat_interrupt = false;
-    _update_interrupt = false;
-    _next_ly = 0;
-    _current_mode = Mode::MODE2;
+    _current_mode = Mode::INIT;
     _next_mode = Mode::MODE2;
     _colors[GrayLevel::TRANSPARENT] = 0x0;
     _colors[GrayLevel::LIGHT_GRAY] = 0xA0A0A0FF;
@@ -29,11 +27,12 @@ LCD::LCD(RamBus &ram) : _ram(ram)
     _reload_surface = true;
     _reload_sprite = true;
     _reload_background = true;
-    _mode_cyles[Mode::MODE2] = cycles_mode2;
-    _mode_cyles[Mode::MODE3] = cycles_mode3;
-    _mode_cyles[Mode::MODE0] = cycles_mode0;
-    _mode_cyles[Mode::MODE1] = cycles_per_line;
-    _next_op_cycle = 0;
+    _mode_cyles[Mode::MODE2] = cycles_mode2 - cycles_intr;
+    _mode_cyles[Mode::MODE3] = cycles_mode3 - cycles_intr;
+    _mode_cyles[Mode::MODE0] = cycles_mode0 - cycles_intr;
+    _mode_cyles[Mode::MODE1] = cycles_per_line - cycles_intr;
+    _mode_cyles[Mode::INTR] = 0;
+    _op_cycle = 0;
     _background_change.fill(0);
     _sprite_change.fill(0);
     _ram.write_register(Register::LY, 0);
@@ -86,18 +85,15 @@ auto LCD::step(int cycles_count) -> void
 
     if (_ram[Register::LCDC] & LCD_ENABLE)
     {
-        _next_op_cycle -= cycles_count;
-        if (_update_interrupt)
-            update_interrupt();
-        if (_next_op_cycle <= 0)
+        _op_cycle -= cycles_count;
+        while (_op_cycle <= 0)
         {
-            _current_mode = _next_mode;
-            if (_next_ly != _ram[Register::LY])
-                _ram.write_register(Register::LY, _next_ly);
             ly = _ram[Register::LY];
-            _next_op_cycle += _mode_cyles[_current_mode];
+            if (_current_mode == MODE1 || _current_mode == MODE2)
+                _ram.write(Register::LY, (ly + 1) % max_lines);
             switch (_current_mode)
             {
+            case Mode::INIT:
             case Mode::MODE2:
                 _next_mode = Mode::MODE3;
                 break;
@@ -110,31 +106,35 @@ auto LCD::step(int cycles_count) -> void
                     _next_mode = Mode::MODE2;
                 else
                     _next_mode = Mode::MODE1;
-                _next_ly = ly + 1;
                 break;
             case Mode::MODE1:
                 _next_mode = Mode::MODE1;
-                _next_ly = (ly + 1) % max_lines;
                 if ((ly + 1) == max_lines)
                 {
                     _framebuffer_ready = _framebuffer;
                     _next_mode = Mode::MODE2;
                 }
                 break;
+            case Mode::INTR:
+                update_interrupt();
+                _op_cycle += _current_op_cycle;
+                _current_mode = _next_mode;
+                return;
+            default:
+                break;
             }
             update_stat();
-            if (_next_op_cycle > -4)
-                _update_interrupt = true;
-            else
-                update_interrupt();
+            _current_op_cycle = _mode_cyles[_current_mode];
+            _current_mode = Mode::INTR;
+            _op_cycle += cycles_intr;
         }
     }
     else
     {
-        _next_mode = Mode::MODE2;
+        _current_mode = Mode::INIT;
         _ram.write_register(Register::LY, 0);
-        _next_op_cycle = 0;
-        _next_ly = 0;
+        _ram.write_register(Register::STAT, _ram[Register::STAT] & 0xFC);
+        _op_cycle = 0;
     }
 }
 
@@ -211,15 +211,16 @@ auto LCD::update_interrupt() -> void
     unsigned char ly = _ram[Register::LY];
     unsigned char lyc = _ram[Register::LYC];
     unsigned char interrupt = _ram[CPU::Register::IF];
+    unsigned char current_mode = stat & 0x3;
     bool stat_interrupt = false;
 
     if (ly == screen_height)
         interrupt |= 0x1;
-    if ((stat & MODE0_INT) && _current_mode == Mode::MODE0)
+    if ((stat & MODE0_INT) && current_mode == Mode::MODE0)
         stat_interrupt = true;
-    if ((stat & MODE1_INT) && _current_mode == Mode::MODE1)
+    if ((stat & MODE1_INT) && current_mode == Mode::MODE1)
         stat_interrupt = true;
-    if ((stat & MODE2_INT) && _current_mode == Mode::MODE2)
+    if ((stat & MODE2_INT) && current_mode == Mode::MODE2)
         stat_interrupt = true;
     if ((stat & LYC_INT) && (ly == lyc))
         stat_interrupt = true;
@@ -373,6 +374,8 @@ auto LCD::draw_sprites(uint32_t *datas) -> void
         value = _ram[address + 2];
         attribute = _ram[address + 3];
 
+        if (_ram[LCDC] & LCDC::OBJ_SIZE)
+            value &= 0xFE;
         if (line >= y && line < y + height)
         {
             if (line - y >= tiles_height)
