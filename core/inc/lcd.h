@@ -16,6 +16,9 @@ static constexpr int tiles_height = 8;
 static constexpr int max_tiles = 512;
 static constexpr int line_width = max_tiles * tiles_width;
 static constexpr int oam_size = 160;
+static constexpr int oam_objects = 40;
+static constexpr int oam_y_offset = 16;
+static constexpr int oam_x_offset = 8;
 static constexpr int tiles_memory_size = 0x1800;
 static constexpr int cycles_intr = 4;
 static constexpr int cycles_mode2 = 80;
@@ -26,6 +29,13 @@ static constexpr int max_lines = 154;
 static constexpr int texture_padding = 2 * tiles_width;
 static constexpr int texture_offset = tiles_width;
 
+struct OamEntry
+{
+    uint8_t y;
+    uint8_t x;
+    uint8_t value;
+    uint8_t attribute;
+};
 class LCD
 {
   public:
@@ -120,7 +130,7 @@ class LCD
     auto load_texture_background() -> void;
     auto draw_sprites(uint32_t *datas) -> void;
     auto draw_background_line(uint32_t *datas) -> void;
-    auto draw_window_line(uint32_t *datas) -> bool;
+    auto draw_window_line(uint32_t *datas) -> void;
 
   private:
     RamBus &_ram;
@@ -128,6 +138,7 @@ class LCD
     bool _lcd_enable;
     int _op_cycle;
     int _current_op_cycle;
+    int _wnd_line;
     Mode _current_mode;
     Mode _next_mode;
     unsigned int _BGP0[4];
@@ -137,7 +148,7 @@ class LCD
     bool _reload_surface;
     bool _reload_sprite;
     bool _reload_background;
-    std::array<int, 4> _mode_cyles;
+    std::array<int, 6> _mode_cyles;
     std::array<int, max_tiles> _background_change;
     std::array<int, max_tiles> _sprite_change;
     std::array<std::array<std::array<int, tiles_height>, line_width>, 384> _texture_sprites;

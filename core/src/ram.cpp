@@ -22,6 +22,20 @@ auto RamBus::clear() -> void
 }
 
 /**
+ * @brief Read a memory range in ram
+ *
+ * @param datas Destination array to copy
+ * @param size Size to copy
+ * @param address Address
+ */
+auto RamBus::read_range(unsigned int address, size_t size, unsigned char *dst_datas) -> void
+{
+    if (address + size > Ram::ram_size)
+        throw std::runtime_error(std::format("RamBus::write_range invalid size : ") + std::to_string(size));
+    std::copy(_ram.begin() + address, _ram.begin() + address + size, dst_datas);
+}
+
+/**
  * @brief Write a memory range in ram
  *
  * @param datas Source array to copy

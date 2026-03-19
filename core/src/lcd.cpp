@@ -1,5 +1,6 @@
 #include "lcd.h"
 #include "ram.h"
+#include <algorithm>
 #include <format>
 #include <functional>
 
@@ -13,6 +14,8 @@
 LCD::LCD(RamBus &ram) : _ram(ram)
 {
     _stat_interrupt = false;
+    _op_cycle = 0;
+    _wnd_line = 0;
     _current_mode = Mode::INIT;
     _next_mode = Mode::MODE2;
     _colors[GrayLevel::TRANSPARENT] = 0x0;
@@ -32,7 +35,6 @@ LCD::LCD(RamBus &ram) : _ram(ram)
     _mode_cyles[Mode::MODE0] = cycles_mode0 - cycles_intr;
     _mode_cyles[Mode::MODE1] = cycles_per_line - cycles_intr;
     _mode_cyles[Mode::INTR] = 0;
-    _op_cycle = 0;
     _background_change.fill(0);
     _sprite_change.fill(0);
     _ram.write_register(Register::LY, 0);
@@ -113,6 +115,7 @@ auto LCD::step(int cycles_count) -> void
                 {
                     _framebuffer_ready = _framebuffer;
                     _next_mode = Mode::MODE2;
+                    _wnd_line = 0;
                 }
                 break;
             case Mode::INTR:
@@ -160,8 +163,6 @@ auto LCD::load_state() -> void
  */
 auto LCD::scanline() -> void
 {
-    bool display_window_line = false;
-
     if (_reload_surface)
     {
         load_texture_background();
@@ -174,10 +175,10 @@ auto LCD::scanline() -> void
     {
         uint32_t *datas = _framebuffer.data() + _ram[LY] * (screen_width + texture_padding);
 
-        if (_ram[Register::LCDC] & WIN_ENABLE)
-            display_window_line = draw_window_line(datas);
-        if (_ram[Register::LCDC] & BG_ENABLE && !display_window_line)
+        if (_ram[Register::LCDC] & BG_ENABLE)
             draw_background_line(datas);
+        if (_ram[Register::LCDC] & WIN_ENABLE)
+            draw_window_line(datas);
         if (_ram[Register::LCDC] & OBJ_ENABLE)
             draw_sprites(datas);
     }
@@ -356,39 +357,35 @@ auto LCD::load_texture_background() -> void
  */
 auto LCD::draw_sprites(uint32_t *datas) -> void
 {
-    int address = Register::OAM;
-    int attribute;
     int line = _ram[LY];
-    int x;
-    int y;
-    int src_y;
     int height = tiles_height;
-    unsigned char value;
+    std::array<OamEntry, oam_objects> oam_entries;
+
+    // Sprite priority
+    _ram.read_range(Register::OAM, oam_objects * sizeof(OamEntry),
+                    reinterpret_cast<unsigned char *>(oam_entries.data()));
+    std::sort(oam_entries.begin(), oam_entries.end(), [](const OamEntry &a, const OamEntry &b) { return a.x > b.x; });
 
     if (_ram[LCDC] & LCDC::OBJ_SIZE)
         height *= 2;
-    for (int i = 0; i < 40; ++i)
+    for (const auto &entry : oam_entries)
     {
-        y = _ram[address] - 16;
-        x = _ram[address + 1] - 8 + texture_offset;
-        value = _ram[address + 2];
-        attribute = _ram[address + 3];
+        int y = entry.y - oam_y_offset;
+        int x = entry.x - oam_x_offset + texture_offset;
+        uint8_t value = entry.value;
+        int attribute = entry.attribute;
+        int src_y;
 
         if (_ram[LCDC] & LCDC::OBJ_SIZE)
             value &= 0xFE;
         if (line >= y && line < y + height)
         {
-            if (line - y >= tiles_height)
-                value++;
-            src_y = (line - y) % tiles_height;
+            src_y = line - y;
             if (attribute & Y_FLIP)
-            {
-                if (line - y < tiles_height)
-                    value++;
-                else
-                    value--;
-                src_y = tiles_height - 1 - src_y;
-            }
+                src_y = height - src_y - 1;
+            if (src_y >= tiles_height)
+                value++;
+            src_y %= tiles_height;
             for (int i = 0; i < tiles_width; ++i)
             {
                 int pixel;
@@ -408,7 +405,6 @@ auto LCD::draw_sprites(uint32_t *datas) -> void
                 x++;
             }
         }
-        address += 4;
     }
 }
 
@@ -451,7 +447,7 @@ auto LCD::draw_background_line(uint32_t *datas) -> void
  *
  * @return true if the window line was drawn, false otherwise
  */
-auto LCD::draw_window_line(uint32_t *datas) -> bool
+auto LCD::draw_window_line(uint32_t *datas) -> void
 {
     int address = BackgroundAddress::AREA0;
     int line = _ram[LY];
@@ -461,12 +457,11 @@ auto LCD::draw_window_line(uint32_t *datas) -> bool
     int value;
     int index;
     int index_address = 0;
-    bool show_tile = false;
 
     if (_ram[Register::LCDC] & WIN_TILE_AREA)
         address = BackgroundAddress::AREA1;
-    address += ((y / tiles_width) * 32);
-    if (y >= 0)
+    address += ((_wnd_line / tiles_width) * 32);
+    if (y >= 0 && y < screen_height && x > 0 && x < screen_width)
     {
         y %= tiles_height;
         for (int dst_x = (x / tiles_width); dst_x <= 20; ++dst_x)
@@ -478,8 +473,7 @@ auto LCD::draw_window_line(uint32_t *datas) -> bool
             for (int i = 0; i < tiles_width; ++i)
                 datas[index++] = _BGP0[_texture_background[value][i][y]];
             index_address %= (tile_maps_width / tiles_width);
-            show_tile = true;
         }
+        _wnd_line++;
     }
-    return (show_tile);
 }

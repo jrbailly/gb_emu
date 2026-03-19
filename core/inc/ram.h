@@ -34,6 +34,7 @@ class RamBus
     {
         _ram[address] = value;
     }
+    auto read_range(unsigned int address, size_t size, unsigned char *dst_datas) -> void;
     auto write_range(const unsigned char *datas, size_t size, unsigned int address) -> void;
     auto write_range(unsigned int start_address, unsigned int dst_address, size_t size) -> void;
     auto register_callback(int address, ram_callback fnc) -> void;
