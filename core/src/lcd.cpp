@@ -35,6 +35,7 @@ LCD::LCD(RamBus &ram) : _ram(ram)
     _mode_cyles[Mode::MODE0] = cycles_mode0 - cycles_intr;
     _mode_cyles[Mode::MODE1] = cycles_per_line - cycles_intr;
     _mode_cyles[Mode::INTR] = 0;
+    _mode_cyles[Mode::INIT] = cycles_mode2 - cycles_intr;
     _background_change.fill(0);
     _sprite_change.fill(0);
     _ram.write_register(Register::LY, 0);
@@ -114,7 +115,7 @@ auto LCD::step(int cycles_count) -> void
                 if ((ly + 1) == max_lines)
                 {
                     _framebuffer_ready = _framebuffer;
-                    _next_mode = Mode::MODE2;
+                    _next_mode = Mode::INIT;
                     _wnd_line = 0;
                 }
                 break;
@@ -138,6 +139,7 @@ auto LCD::step(int cycles_count) -> void
         _ram.write_register(Register::LY, 0);
         _ram.write_register(Register::STAT, _ram[Register::STAT] & 0xFC);
         _op_cycle = 0;
+        _wnd_line = 0;
     }
 }
 
@@ -461,9 +463,9 @@ auto LCD::draw_window_line(uint32_t *datas) -> void
     if (_ram[Register::LCDC] & WIN_TILE_AREA)
         address = BackgroundAddress::AREA1;
     address += ((_wnd_line / tiles_width) * 32);
-    if (y >= 0 && y < screen_height && x > 0 && x < screen_width)
+    if (y >= 0 && (x / tiles_width) <= 20)
     {
-        y %= tiles_height;
+        int tile_y = _wnd_line % tiles_height;
         for (int dst_x = (x / tiles_width); dst_x <= 20; ++dst_x)
         {
             value = _ram[address + index_address++];
@@ -471,7 +473,7 @@ auto LCD::draw_window_line(uint32_t *datas) -> void
                 value += 256;
             index = texture_offset + dst_x * tiles_width - x_offset;
             for (int i = 0; i < tiles_width; ++i)
-                datas[index++] = _BGP0[_texture_background[value][i][y]];
+                datas[index++] = _BGP0[_texture_background[value][i][tile_y]];
             index_address %= (tile_maps_width / tiles_width);
         }
         _wnd_line++;
