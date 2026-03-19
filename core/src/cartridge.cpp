@@ -1,5 +1,6 @@
 #include "cartridge.h"
 #include "ram.h"
+#include <bit>
 #include <format>
 #include <fstream>
 #include <stdexcept>
@@ -9,7 +10,8 @@
  *
  */
 Cartridge::Cartridge()
-    : _mode(0), _bank(0), _upper_bank(0), _cgb_flag(DMG_ONLY), _sgb_flag(NO_SGB), _cartridge_type(ROM_ONLY)
+    : _mode(0), _bank(0), _upper_bank(0), _bank_mask(0), _cgb_flag(DMG_ONLY), _sgb_flag(NO_SGB),
+      _cartridge_type(ROM_ONLY)
 {
 }
 
@@ -21,25 +23,20 @@ Cartridge::Cartridge()
 auto Cartridge::init(RamBus &ram) -> void
 {
     ram.register_callback_range(MBC_ROM_BANK, block_size, [this](RamBus &ram, int, unsigned char val) {
-        if (_upper_bank + val > _rom.size())
-            throw std::runtime_error(std::format("Cartridge::init invalid bank : ") +
-                                     std::to_string(_upper_bank + val));
         if (val == 0)
             val = 1;
-        _bank = val;
+        _bank = val & _bank_mask;
         ram.write_range(_rom[_upper_bank + _bank].data(), block_size, 0x4000);
     });
-    ram.register_callback_range(MBC_RAM_BANK, 0x2000, [](RamBus &, int, unsigned char) {
-        // if (_mode == 0)
-        //     _upper_bank = (val & 0x3) << 5;
-    });
+    ram.register_callback_range(MBC_RAM_BANK, 0x2000, [](RamBus &, int, unsigned char) {});
     ram.register_callback_range(MBC_BANKING_MODE, 0x2000, [this](RamBus &, int, unsigned char val) { _mode = val; });
 }
 
 /**
- * @brief Read ROM from ".gb" file
+ * @brief Read a ROM file and load it as 16 KB blocks into the internal ROM vector.
  *
- * @param filename ROM filename
+ * @param filename Path to the .gb ROM file.
+ * @throws std::runtime_error if the file cannot be opened or is empty.
  */
 auto Cartridge::read_rom(const std::string_view filename) -> void
 {
@@ -80,10 +77,6 @@ auto Cartridge::validate_header() -> void
         throw std::runtime_error(
             std::format("Unsupported CGB flag: 0x{:02X} (CGB-only cartridges are not supported)", cgb_byte));
 
-    if (sgb_byte != NO_SGB)
-        throw std::runtime_error(
-            std::format("Unsupported SGB flag: 0x{:02X} (Super Game Boy cartridges are not supported)", sgb_byte));
-
     if (type_byte != ROM_ONLY && type_byte != MBC1 && type_byte != MBC1_RAM && type_byte != MBC1_RAM_BATTERY)
         throw std::runtime_error(std::format(
             "Unsupported cartridge type: 0x{:02X} (only ROM-only and MBC1 cartridges are supported)", type_byte));
@@ -91,6 +84,8 @@ auto Cartridge::validate_header() -> void
     _cgb_flag = static_cast<CgbFlag>(cgb_byte);
     _sgb_flag = static_cast<SgbFlag>(sgb_byte);
     _cartridge_type = static_cast<CartridgeType>(type_byte);
+
+    _bank_mask = std::bit_ceil(_rom.size()) - 1;
 }
 
 /**

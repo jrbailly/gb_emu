@@ -100,6 +100,7 @@ class Cartridge
     int _mode;
     size_t _bank;
     size_t _upper_bank;
+    size_t _bank_mask;
     CgbFlag _cgb_flag;
     SgbFlag _sgb_flag;
     CartridgeType _cartridge_type;
