@@ -8,32 +8,26 @@ Controllers::Controllers(RamBus &ram) : _ram(ram), _dpads(0xf), _buttons(0xf)
 auto Controllers::init(RamBus &ram) -> void
 {
     ram.register_callback(Register::JOYP, [this](RamBus &ram, int, unsigned char val) {
-        uint8_t value = val & 0xF0;
+        uint8_t select = val & (ESelect::BUTTON | ESelect::DPAD);
+        uint8_t low;
 
-        if ((value & 0x20) == 0)
-            value = 0x20 | _buttons;
-        else if ((value & 0x10) == 0)
-            value = 0x10 | _dpads;
-        if (_dpads == 0xF && _buttons == 0xF)
-            value = 0x3F;
-        ram.write_register(Register::JOYP, value);
+        if (select == 0x00)
+            low = _buttons & _dpads;
+        else if ((select & ESelect::BUTTON) == 0)
+            low = _buttons;
+        else if ((select & ESelect::DPAD) == 0)
+            low = _dpads;
+        else
+            low = 0x0F;
+
+        ram.write_register(Register::JOYP, 0xC0 | select | low);
     });
 }
 
 auto Controllers::set_input(int pad, int button) -> void
 {
-    int last_dpads = _dpads;
-    int last_buttons = _buttons;
-    bool active_interrupt = false;
-
+    if (_dpads != pad || _buttons != button)
+        _ram.write_register(CPU::Register::IF, _ram[CPU::Register::IF] | CPU::IFFlag::JOYPAD);
     _dpads = pad;
     _buttons = button;
-    for (int i = 0; i < 4; ++i)
-    {
-        if (((last_dpads & (1 << i)) && ((_dpads & (1 << i)) == 0)) ||
-            ((last_buttons & (1 << i)) && ((_buttons & (1 << i)) == 0)))
-            active_interrupt = true;
-    }
-    if (active_interrupt)
-        _ram.write_register(CPU::Register::IF, _ram[CPU::Register::IF] | 0x10);
 }

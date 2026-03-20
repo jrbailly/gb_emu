@@ -218,7 +218,7 @@ auto LCD::update_interrupt() -> void
     bool stat_interrupt = false;
 
     if (ly == screen_height)
-        interrupt |= 0x1;
+        interrupt |= CPU::IFFlag::VBLANK;
     if ((stat & MODE0_INT) && current_mode == Mode::MODE0)
         stat_interrupt = true;
     if ((stat & MODE1_INT) && current_mode == Mode::MODE1)
@@ -228,7 +228,7 @@ auto LCD::update_interrupt() -> void
     if ((stat & LYC_INT) && (ly == lyc))
         stat_interrupt = true;
     if (!_stat_interrupt && stat_interrupt)
-        interrupt |= 0x2;
+        interrupt |= CPU::IFFlag::LCD;
     _stat_interrupt = stat_interrupt;
     _ram.write_register(CPU::Register::IF, interrupt);
 }

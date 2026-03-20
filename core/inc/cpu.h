@@ -68,11 +68,20 @@ class CPU
     };
     enum InterruptAddress
     {
-        VBLANK = 0x40,
-        STAT = 0x48,
-        TIMER = 0x50,
-        SERIAL = 0x58,
-        JOYPAD = 0x60
+        VBLANK_ADDR = 0x40,
+        STAT_ADDR = 0x48,
+        TIMER_ADDR = 0x50,
+        SERIAL_ADDR = 0x58,
+        JOYPAD_ADDR = 0x60,
+    };
+
+    enum IFFlag
+    {
+        VBLANK = 0x01,
+        LCD = 0x02,
+        TIMER = 0x04,
+        SERIAL = 0x08,
+        JOYPAD = 0x10,
     };
 
   private:

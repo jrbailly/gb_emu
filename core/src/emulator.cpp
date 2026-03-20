@@ -47,6 +47,7 @@ auto Emulator::step_frame() -> int
 
     while (_cycles_count < frame_cycle_count)
     {
+        //        _cpu->debug(_cycles_count);
         cycles = _cpu->step();
         _apu->step(cycles);
         _lcd->step(cycles);

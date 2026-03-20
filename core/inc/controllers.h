@@ -11,6 +11,11 @@ class Controllers
     {
         JOYP = 0xFF00,
     };
+    enum ESelect
+    {
+        BUTTON = 0x20,
+        DPAD = 0x10,
+    };
     enum DPadMask
     {
         RIGHT = 0x01,

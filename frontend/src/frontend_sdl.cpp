@@ -61,22 +61,22 @@ auto FrontendSDL::init_graphics() -> void
  */
 auto FrontendSDL::init_controllers() -> void
 {
-    _dpads_binding[SDLK_UP] = Controllers::UP;
-    _dpads_binding[SDL_GAMEPAD_BUTTON_DPAD_UP] = Controllers::UP;
-    _dpads_binding[SDLK_DOWN] = Controllers::DOWN;
-    _dpads_binding[SDL_GAMEPAD_BUTTON_DPAD_DOWN] = Controllers::DOWN;
-    _dpads_binding[SDLK_LEFT] = Controllers::LEFT;
-    _dpads_binding[SDL_GAMEPAD_BUTTON_DPAD_LEFT] = Controllers::LEFT;
-    _dpads_binding[SDLK_RIGHT] = Controllers::RIGHT;
-    _dpads_binding[SDL_GAMEPAD_BUTTON_DPAD_RIGHT] = Controllers::RIGHT;
-    _buttons_binding[SDLK_RETURN] = Controllers::START;
-    _buttons_binding[SDL_GAMEPAD_BUTTON_START] = Controllers::START;
-    _buttons_binding[SDLK_BACKSPACE] = Controllers::SELECT;
-    _buttons_binding[SDL_GAMEPAD_BUTTON_GUIDE] = Controllers::SELECT;
-    _buttons_binding[SDLK_LCTRL] = Controllers::A;
-    _buttons_binding[SDL_GAMEPAD_BUTTON_SOUTH] = Controllers::A;
-    _buttons_binding[SDLK_LALT] = Controllers::B;
-    _buttons_binding[SDL_GAMEPAD_BUTTON_EAST] = Controllers::B;
+    _dpads_binding_keys[SDLK_UP] = Controllers::UP;
+    _dpads_binding_keys[SDLK_DOWN] = Controllers::DOWN;
+    _dpads_binding_keys[SDLK_LEFT] = Controllers::LEFT;
+    _dpads_binding_keys[SDLK_RIGHT] = Controllers::RIGHT;
+    _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_UP] = Controllers::UP;
+    _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_DOWN] = Controllers::DOWN;
+    _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_LEFT] = Controllers::LEFT;
+    _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_RIGHT] = Controllers::RIGHT;
+    _buttons_binding_keys[SDLK_RETURN] = Controllers::START;
+    _buttons_binding_keys[SDLK_BACKSPACE] = Controllers::SELECT;
+    _buttons_binding_keys[SDLK_LCTRL] = Controllers::A;
+    _buttons_binding_keys[SDLK_LALT] = Controllers::B;
+    _buttons_binding_gamepad[SDL_GAMEPAD_BUTTON_START] = Controllers::START;
+    _buttons_binding_gamepad[SDL_GAMEPAD_BUTTON_GUIDE] = Controllers::SELECT;
+    _buttons_binding_gamepad[SDL_GAMEPAD_BUTTON_SOUTH] = Controllers::A;
+    _buttons_binding_gamepad[SDL_GAMEPAD_BUTTON_EAST] = Controllers::B;
 }
 
 /**
@@ -124,28 +124,28 @@ auto FrontendSDL::get_input(int &pad, int &button) -> bool
                 _save_requested = true;
             if (event.key.key == SDLK_F2)
                 _load_requested = true;
-            if (_dpads_binding.count(event.key.key))
-                _dpads &= ~_dpads_binding[event.key.key];
-            if (_buttons_binding.count(event.key.key))
-                _buttons &= ~_buttons_binding[event.key.key];
+            if (_dpads_binding_keys.count(event.key.key))
+                _dpads &= ~_dpads_binding_keys[event.key.key];
+            if (_buttons_binding_keys.count(event.key.key))
+                _buttons &= ~_buttons_binding_keys[event.key.key];
             break;
         case SDL_EVENT_KEY_UP:
-            if (_dpads_binding.count(event.key.key))
-                _dpads |= _dpads_binding[event.key.key];
-            if (_buttons_binding.count(event.key.key))
-                _buttons |= _buttons_binding[event.key.key];
+            if (_dpads_binding_keys.count(event.key.key))
+                _dpads |= _dpads_binding_keys[event.key.key];
+            if (_buttons_binding_keys.count(event.key.key))
+                _buttons |= _buttons_binding_keys[event.key.key];
             break;
         case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-            if (_dpads_binding.count(event.gbutton.button))
-                _dpads &= ~_dpads_binding[event.gbutton.button];
-            if (_buttons_binding.count(event.gbutton.button))
-                _buttons &= ~_buttons_binding[event.gbutton.button];
+            if (_dpads_binding_gamepad.count(event.gbutton.button))
+                _dpads &= ~_dpads_binding_gamepad[event.gbutton.button];
+            if (_buttons_binding_gamepad.count(event.gbutton.button))
+                _buttons &= ~_buttons_binding_gamepad[event.gbutton.button];
             break;
         case SDL_EVENT_GAMEPAD_BUTTON_UP:
-            if (_dpads_binding.count(event.gbutton.button))
-                _dpads |= _dpads_binding[event.gbutton.button];
-            if (_buttons_binding.count(event.gbutton.button))
-                _buttons |= _buttons_binding[event.gbutton.button];
+            if (_dpads_binding_gamepad.count(event.gbutton.button))
+                _dpads |= _dpads_binding_gamepad[event.gbutton.button];
+            if (_buttons_binding_gamepad.count(event.gbutton.button))
+                _buttons |= _buttons_binding_gamepad[event.gbutton.button];
             break;
         default:
             break;

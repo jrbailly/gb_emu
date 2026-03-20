@@ -99,16 +99,16 @@ uint8_t CPU::step()
     if (_registers.ime == 1 && _active_interruption == false)
     {
         uint8_t interrupts = _ram[Register::IE] & _ram[Register::IF];
-        if (interrupts & 0x1)
-            cycles_count = active_interrupt(0x1, InterruptAddress::VBLANK);
-        else if (interrupts & 0x2)
-            cycles_count = active_interrupt(0x2, InterruptAddress::STAT);
-        else if (interrupts & 0x4)
-            cycles_count = active_interrupt(0x4, InterruptAddress::TIMER);
-        else if (interrupts & 0x8)
-            cycles_count = active_interrupt(0x8, InterruptAddress::SERIAL);
-        else if (interrupts & 0x10)
-            cycles_count = active_interrupt(0x10, InterruptAddress::JOYPAD);
+        if (interrupts & IFFlag::VBLANK)
+            cycles_count = active_interrupt(IFFlag::VBLANK, InterruptAddress::VBLANK_ADDR);
+        else if (interrupts & IFFlag::LCD)
+            cycles_count = active_interrupt(IFFlag::LCD, InterruptAddress::STAT_ADDR);
+        else if (interrupts & IFFlag::TIMER)
+            cycles_count = active_interrupt(IFFlag::TIMER, InterruptAddress::TIMER_ADDR);
+        else if (interrupts & IFFlag::SERIAL)
+            cycles_count = active_interrupt(IFFlag::SERIAL, InterruptAddress::SERIAL_ADDR);
+        else if (interrupts & IFFlag::JOYPAD)
+            cycles_count = active_interrupt(IFFlag::JOYPAD, InterruptAddress::JOYPAD_ADDR);
         if (interrupts)
             actived_interrupt = true;
     }

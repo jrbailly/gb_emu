@@ -35,8 +35,10 @@ class FrontendSDL : public IFrontend
     HighpassFilter _filter[CHANNELS];
     int _dpads;
     int _buttons;
-    std::map<int, int> _dpads_binding;
-    std::map<int, int> _buttons_binding;
+    std::map<int, int> _dpads_binding_keys;
+    std::map<int, int> _dpads_binding_gamepad;
+    std::map<int, int> _buttons_binding_keys;
+    std::map<int, int> _buttons_binding_gamepad;
     bool _save_requested;
     bool _load_requested;
     int _scale;

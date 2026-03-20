@@ -65,7 +65,7 @@ auto Timer::step(RamBus &ram, int cycles_count) -> void
             unsigned char tma = ram[Register::TMA];
 
             tima = tma;
-            ram.write_register(CPU::Register::IF, interrupt | 0x4);
+            ram.write_register(CPU::Register::IF, interrupt | CPU::IFFlag::TIMER);
         }
         else
             tima++;
