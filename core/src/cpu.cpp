@@ -1126,8 +1126,8 @@ inline void CPU::write_ram16(uint16_t address, uint16_t value)
 inline void CPU::push(uint8_t reg)
 {
     _registers.sp--;
-    _ram.write_register(_registers.sp--, (_registers.regs16[reg] >> 8) & 0xFF);
-    _ram.write_register(_registers.sp, _registers.regs16[reg] & 0xFF);
+    _ram.write(_registers.sp--, (_registers.regs16[reg] >> 8) & 0xFF);
+    _ram.write(_registers.sp, _registers.regs16[reg] & 0xFF);
 }
 
 /**
@@ -1610,8 +1610,8 @@ inline bool CPU::jump_conditionnal(uint8_t opcode, uint16_t addr)
 inline void CPU::call(uint16_t addr)
 {
     _registers.sp--;
-    _ram.write_register(_registers.sp--, (_registers.pc >> 8) & 0xFF);
-    _ram.write_register(_registers.sp, _registers.pc & 0xFF);
+    _ram.write(_registers.sp--, (_registers.pc >> 8) & 0xFF);
+    _ram.write(_registers.sp, _registers.pc & 0xFF);
     jump(addr);
 }
 

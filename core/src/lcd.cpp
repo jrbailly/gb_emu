@@ -23,7 +23,7 @@ LCD::LCD(RamBus &ram) : _ram(ram)
     _colors[GrayLevel::DARK_GRAY] = 0x585858FF;
     _colors[GrayLevel::BLACK] = 0x000000FF;
     _colors[GrayLevel::WHITE] = 0xFFFFFFFF;
-    _BGP0[0] = _colors[GrayLevel::TRANSPARENT];
+    _BGP0[0] = _colors[GrayLevel::WHITE];
     _BGP0[1] = _colors[GrayLevel::LIGHT_GRAY];
     _BGP0[2] = _colors[GrayLevel::DARK_GRAY];
     _BGP0[3] = _colors[GrayLevel::BLACK];
@@ -140,6 +140,9 @@ auto LCD::step(int cycles_count) -> void
         _ram.write_register(Register::STAT, _ram[Register::STAT] & 0xFC);
         _op_cycle = 0;
         _wnd_line = 0;
+        _reload_surface = true;
+        _reload_sprite = true;
+        _reload_background = true;
     }
 }
 
@@ -296,7 +299,6 @@ auto LCD::update_OBP1() -> void
 auto LCD::load_texture_sprites() -> void
 {
     int address;
-    int tile_index = 0;
     unsigned char value;
 
     for (int i = 0; i < 256; ++i)
@@ -313,9 +315,8 @@ auto LCD::load_texture_sprites() -> void
                 }
                 address += 2;
             }
+            _sprite_change[i] = 0;
         }
-        _sprite_change[i] = 0;
-        tile_index += tiles_width;
     }
 }
 
@@ -327,7 +328,6 @@ auto LCD::load_texture_sprites() -> void
 auto LCD::load_texture_background() -> void
 {
     int address = TilesAddress::BLOCK0;
-    int tile_index = 0;
     unsigned char value;
 
     for (int i = 0; i < 384; ++i)
@@ -344,9 +344,8 @@ auto LCD::load_texture_background() -> void
                 }
                 address += 2;
             }
+            _background_change[i] = 0;
         }
-        _background_change[i] = 0;
-        tile_index += tiles_width;
     }
 }
 

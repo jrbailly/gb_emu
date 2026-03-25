@@ -3,7 +3,7 @@ project(gb_emu)
 set(CMAKE_CXX_STANDARD 20)
 set (CMAKE_COLOR_MAKEFILE ON)
 
-find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared PATHS "D:\\workspace\\SDL3-3.2.8")
+find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared PATHS "D:\\workspace\\SDL3-3.4.2")
 #find_package(GTest REQUIRED)
 
 file(GLOB_RECURSE SRCS src/*.cpp core/src/*.cpp frontend/src/*.cpp)

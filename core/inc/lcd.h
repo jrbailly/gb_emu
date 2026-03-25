@@ -135,7 +135,6 @@ class LCD
   private:
     RamBus &_ram;
     bool _stat_interrupt;
-    bool _lcd_enable;
     int _op_cycle;
     int _current_op_cycle;
     int _wnd_line;
