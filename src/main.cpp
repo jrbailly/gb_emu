@@ -19,7 +19,8 @@ bool ParseCommandLine(int argc, char **argv, Config &config)
     options.add_options()("f,filename", "ROM file", cxxopts::value<std::string>())(
         "s,screen_scale", "Screen size", cxxopts::value<int>()->default_value("3"))(
         "a,audio_filter", "Sound High Pass Filter", cxxopts::value<int>()->default_value("1"))(
-        "r,record_file", "Inputs record file", cxxopts::value<std::string>())("h,help", "Help");
+        "r,record_file", "Inputs record file", cxxopts::value<std::string>())("h,help", "Help")(
+        "v,version", "Show version");
 
     auto result = options.parse(argc, argv);
 
@@ -29,6 +30,11 @@ bool ParseCommandLine(int argc, char **argv, Config &config)
     if (result.count("record_file"))
         config._recordfile = result["record_file"].as<std::string>();
     config._audio_filter = result["audio_filter"].as<int>();
+    if (result.count("version"))
+    {
+        std::cout << app_version << std::endl;
+        return false;
+    }
     if (result.count("help") || config._romfile.empty())
     {
         std::cout << options.help() << std::endl;

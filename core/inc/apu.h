@@ -26,6 +26,7 @@ struct Channel
     int direction = 0;
     int volume = 0;
     int16_t value = 0;
+    bool length_enabled = false;
     std::function<void()> trigger;
     std::function<void()> process;
 };

@@ -44,7 +44,7 @@ auto APU::init(RamBus &ram) -> void
     }
     ram.register_callback(Register::NR30, [](RamBus &ram, int, unsigned char val) {
         if ((val & 0x80) == 0)
-            ram.write_register(NR52, ram[NR52] & ~(1 << 3));
+            ram.write_register(NR52, ram[NR52] & ~(1 << 2));
     });
 }
 
@@ -191,10 +191,11 @@ auto APU::trigger(int channel) -> void
     _channels[channel].phase = 0;
     _channels[channel].sweep_pace = sweep_pace;
     _channels[channel].direction = _ram[reg_channel_space + NR12] & 0x8;
-    _channels[channel].length_timer = 512;
+    _channels[channel].length_timer = _ram[reg_channel_space + NR11] & 0x3F;
     _channels[channel].volume = _ram[reg_channel_space + NR12] >> 4;
+    _channels[channel].length_enabled = false;
     if (_ram[reg_channel_space + NR14] & 0x40)
-        _channels[channel].length_timer = _ram[reg_channel_space + NR11] & 0x3F;
+        _channels[channel].length_enabled = true;
     _channels[channel].trigger();
 }
 
@@ -229,8 +230,6 @@ auto APU::trigger_ch3() -> void
 
     _channels[2].increment = (65536.0 / (2048.0 - period)) / SAMPLERATE;
     _channels[2].sweep_pace = 0;
-    if (_ram[NR34] & 0x40)
-        _channels[2].length_timer = _ram[NR31];
     switch ((_ram[NR32] >> 5) & 0x3)
     {
     case 0:
@@ -317,9 +316,15 @@ auto APU::update_timer() -> void
 {
     for (int i = 0; i < 4; ++i)
     {
-        _channels[i].length_timer++;
-        if ((i == 2 && _channels[i].length_timer == 256) || (i != 2 && _channels[i].length_timer == 64))
-            _ram.write_register(NR52, _ram[NR52] & ~(1 << i));
+        if (_channels[i].length_enabled)
+        {
+            _channels[i].length_timer++;
+            if ((i == 2 && _channels[i].length_timer == 256) || (i != 2 && _channels[i].length_timer == 64))
+            {
+                _ram.write_register(NR52, _ram[NR52] & ~(1 << i));
+                _channels[i].length_enabled = false;
+            }
+        }
     }
 }
 
