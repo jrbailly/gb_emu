@@ -15,13 +15,13 @@
  */
 auto VbmRecord::parse_file(const std::string &filename) -> void
 {
-    constexpr size_t HEADER_SIZE = 0x100;
+    constexpr size_t header_size = 0x100;
     uint16_t frame = 0;
     std::ifstream input(filename.data(), std::ios::binary);
 
     if (!input)
         throw std::runtime_error(std::format("Failed to open record file: ") + filename.data());
-    input.seekg(HEADER_SIZE, std::ios::beg);
+    input.seekg(header_size, std::ios::beg);
     while (input.read(reinterpret_cast<char *>(&frame), sizeof(frame)))
     {
         int dpads = 0xF;

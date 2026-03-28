@@ -5,16 +5,16 @@
 #include <cstdint>
 #include <span>
 
-static constexpr float APU_FREQ = CPU_FREQ / 4.0;
-static constexpr float SAMPLERATE = 44100;
-static constexpr int SAMPLE_PERIOD = CPU_FREQ / SAMPLERATE;
-static constexpr int TIMER_PERIOD = CPU_FREQ / 256;
-static constexpr int SWEEP_DIV = 2;
-static constexpr int ENVELOPPE_DIV = 4;
-static constexpr float PULSE_SAMPLES = 8;
-static constexpr float PCM_SAMPLES = 32;
-static constexpr int CHANNELS = 2;
-static constexpr int AUDIO_BUFFER_SIZE = 65536;
+static constexpr float apu_freq = cpu_freq / 4.0;
+static constexpr float samplerate = 44100;
+static constexpr int sample_period = cpu_freq / samplerate;
+static constexpr int timer_period = cpu_freq / 256;
+static constexpr int sweep_div = 2;
+static constexpr int enveloppe_div = 4;
+static constexpr float pulse_samples = 8;
+static constexpr float pcm_samples = 32;
+static constexpr int channels = 2;
+static constexpr int audio_buffer_size = 65536;
 
 struct Channel
 {
@@ -59,7 +59,7 @@ class APU
         NR52 = 0xFF26,
         WAVE_RAM = 0xFF30,
     };
-    using AudioBuffer = std::array<int16_t, AUDIO_BUFFER_SIZE * CHANNELS>;
+    using AudioBuffer = std::array<int16_t, audio_buffer_size * channels>;
     using AudioView = std::span<const int16_t>;
 
     APU(RamBus &ram);

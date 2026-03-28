@@ -26,8 +26,8 @@ auto FrontendSDL::init_audio() -> void
     SDL_AudioSpec spec;
 
     spec.format = SDL_AUDIO_S16;
-    spec.channels = CHANNELS;
-    spec.freq = (int)SAMPLERATE;
+    spec.channels = channels;
+    spec.freq = (int)samplerate;
     _audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
     if (!_audio_stream)
         throw std::runtime_error(std::format("SDL_OpenAudioDeviceStream : {}", SDL_GetError()));
@@ -195,8 +195,8 @@ auto FrontendSDL::play_audio(std::span<const int16_t> buffer) -> void
 {
     std::vector<int16_t> copy(buffer.begin(), buffer.end());
     if (_active_filter)
-        for (int channel = 0; channel < CHANNELS; ++channel)
-            _filter[channel].filter(std::span<int16_t>(copy), channel, CHANNELS);
+        for (int channel = 0; channel < channels; ++channel)
+            _filter[channel].filter(std::span<int16_t>(copy), channel, channels);
     if (!SDL_PutAudioStreamData(_audio_stream, copy.data(), copy.size() * sizeof(int16_t)))
         throw std::runtime_error(std::format("SDL_PutAudioStreamData : {}", SDL_GetError()));
 }

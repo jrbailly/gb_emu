@@ -8,38 +8,38 @@ Application::Application()
 {
 }
 
-auto Application::Init(const Config &Configuration) -> void
+auto Application::init(const Config &configuration) -> void
 {
-    mFrontend = std::make_unique<FrontendSDL>(Configuration);
-    mEmulator = std::make_unique<Emulator>(Configuration);
-    mEmulator->init();
-    if (!Configuration._recordfile.empty())
+    _frontend = std::make_unique<FrontendSDL>(configuration);
+    _emulator = std::make_unique<Emulator>(configuration);
+    _emulator->init();
+    if (!configuration._recordfile.empty())
     {
-        mRecord = std::make_unique<VbmRecord>();
-        mRecord->parse_file(Configuration._recordfile);
+        _record = std::make_unique<VbmRecord>();
+        _record->parse_file(configuration._recordfile);
     }
 }
 
-auto Application::MainLoop() -> void
+auto Application::main_loop() -> void
 {
     int pad = 0;
     int button = 0;
 
-    while (!mQuit)
+    while (!_quit)
     {
-        mQuit = mFrontend->get_input(pad, button);
-        if (mRecord)
-            mRecord->get_input(pad, button);
-        if (mFrontend->pop_save_request())
-            mEmulator->save_state();
-        if (mFrontend->pop_load_request())
-            mEmulator->load_state();
-        if (!mQuit)
+        _quit = _frontend->get_input(pad, button);
+        if (_record)
+            _record->get_input(pad, button);
+        if (_frontend->pop_save_request())
+            _emulator->save_state();
+        if (_frontend->pop_load_request())
+            _emulator->load_state();
+        if (!_quit)
         {
-            mEmulator->set_input(pad, button);
-            mFrontend->delay(mEmulator->step_frame());
-            mFrontend->play_audio(mEmulator->get_audio_buffer());
-            mFrontend->render(mEmulator->get_frame_buffer());
+            _emulator->set_input(pad, button);
+            _frontend->delay(_emulator->step_frame());
+            _frontend->play_audio(_emulator->get_audio_buffer());
+            _frontend->render(_emulator->get_frame_buffer());
         }
     }
 }

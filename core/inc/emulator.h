@@ -13,7 +13,7 @@
 #include <span>
 
 static constexpr int refresh_rate = 60;
-static constexpr int frame_cycle_count = CPU_FREQ / refresh_rate;
+static constexpr int frame_cycle_count = cpu_freq / refresh_rate;
 static constexpr int frame_duration = (1000000 / refresh_rate);
 
 class Emulator

@@ -32,7 +32,7 @@ class FrontendSDL : public IFrontend
     SDL_Window *_window = nullptr;
     SDL_Renderer *_renderer = nullptr;
     SDL_Texture *_texture_viewer = nullptr;
-    HighpassFilter _filter[CHANNELS];
+    HighpassFilter _filter[channels];
     int _dpads;
     int _buttons;
     std::map<int, int> _dpads_binding_keys;

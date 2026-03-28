@@ -8,9 +8,9 @@
 #include <cstdint>
 #include <map>
 
-static constexpr size_t OPCODE_SIZE = 0xFF;
-static constexpr int CPU_FREQ = 4194304;
-static constexpr int MACHINE_CYCLE = 4;
+static constexpr size_t opcode_size = 0xFF;
+static constexpr int cpu_freq = 4194304;
+static constexpr int machine_cycle = 4;
 
 struct Registers
 {

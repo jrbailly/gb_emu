@@ -28,16 +28,16 @@ auto HighpassFilter::filter(std::span<int16_t> buffer, int channel_offset, int s
     {
         float value = buffer[j];
         out = 0;
-        for (i = 0; i < NPOLE; i++)
+        for (i = 0; i < npole; i++)
             _hfilter_x[i] = _hfilter_x[i + 1];
-        _hfilter_x[NPOLE] = value / _gain;
-        for (i = 0; i < NPOLE; i++)
+        _hfilter_x[npole] = value / _gain;
+        for (i = 0; i < npole; i++)
             _hfilter_y[i] = _hfilter_y[i + 1];
-        for (i = 0; i <= NPOLE; i++)
+        for (i = 0; i <= npole; i++)
             out += _hfilter_x[i] * _bcoeff[i];
-        for (i = 0; i < NPOLE; i++)
+        for (i = 0; i < npole; i++)
             out -= _hfilter_y[i] * _acoeff[i];
-        _hfilter_y[NPOLE] = out;
+        _hfilter_y[npole] = out;
         buffer[j] = static_cast<int16_t>(out);
     }
 }

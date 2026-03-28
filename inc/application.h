@@ -11,12 +11,13 @@ class Application
 {
   public:
     Application();
-    auto Init(const Config &Configuration) -> void;
-    auto MainLoop() -> void;
+    auto init(const Config &configuration) -> void;
+    auto main_loop() -> void;
+
   private:
-    std::unique_ptr<IFrontend> mFrontend;
-    std::unique_ptr<Emulator> mEmulator;
-    std::unique_ptr<IRecord> mRecord;
-    bool mQuit = false;
-  };
+    std::unique_ptr<IFrontend> _frontend;
+    std::unique_ptr<Emulator> _emulator;
+    std::unique_ptr<IRecord> _record;
+    bool _quit = false;
+};
 #endif

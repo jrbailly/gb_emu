@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <span>
 
-static constexpr int NPOLE = 1;
+static constexpr int npole = 1;
 
 class HighpassFilter
 {
@@ -13,8 +13,8 @@ class HighpassFilter
 
   private:
     float _gain;
-    std::array<float, NPOLE + 1> _acoeff;
-    std::array<float, NPOLE + 1> _bcoeff;
-    std::array<float, NPOLE + 1> _hfilter_x;
-    std::array<float, NPOLE + 1> _hfilter_y;
+    std::array<float, npole + 1> _acoeff;
+    std::array<float, npole + 1> _bcoeff;
+    std::array<float, npole + 1> _hfilter_x;
+    std::array<float, npole + 1> _hfilter_y;
 };

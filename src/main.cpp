@@ -12,7 +12,7 @@
  * @param config Structure to store parsed configuration.
  * @return True if parsing was successful, false otherwise (e.g., help requested).
  */
-bool ParseCommandLine(int argc, char **argv, Config &config)
+bool parse_command_line(int argc, char **argv, Config &config)
 {
     cxxopts::Options options(argv[0]);
 
@@ -52,15 +52,15 @@ bool ParseCommandLine(int argc, char **argv, Config &config)
  */
 int main(int argc, char **argv)
 {
-    Config Configuration;
-    Application App;
+    Config configuration;
+    Application app;
 
     try
     {
-        if (!ParseCommandLine(argc, argv, Configuration))
+        if (!parse_command_line(argc, argv, configuration))
             return (EXIT_SUCCESS);
-        App.Init(Configuration);
-        App.MainLoop();
+        app.init(configuration);
+        app.main_loop();
     }
     catch (const std::exception &e)
     {

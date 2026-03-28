@@ -115,7 +115,7 @@ uint8_t CPU::step()
     _active_interruption = false;
     if (actived_interrupt == false && _registers.halt == 0)
         cycles_count = decode();
-    return (cycles_count * MACHINE_CYCLE);
+    return (cycles_count * machine_cycle);
 }
 
 /**

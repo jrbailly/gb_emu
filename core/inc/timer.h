@@ -4,7 +4,7 @@
 #include "cpu.h"
 #include "ram.h"
 
-static constexpr int cycles_per_div_increment = CPU_FREQ / 16384;
+static constexpr int cycles_per_div_increment = cpu_freq / 16384;
 class Timer
 {
   public:
