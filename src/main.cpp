@@ -12,7 +12,7 @@
  * @param config Structure to store parsed configuration.
  * @return True if parsing was successful, false otherwise (e.g., help requested).
  */
-bool parse_command_line(int argc, char **argv, Config &config)
+auto parse_command_line(int argc, char **argv, Config &config) -> bool
 {
     cxxopts::Options options(argv[0]);
 
@@ -50,7 +50,7 @@ bool parse_command_line(int argc, char **argv, Config &config)
  * @param argv Array of command line arguments.
  * @return 0 if the application runs successfully.
  */
-int main(int argc, char **argv)
+auto main(int argc, char **argv) -> int
 {
     Config configuration;
     Application app;

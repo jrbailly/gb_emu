@@ -68,7 +68,7 @@ CPU::CPU(RamBus &ram) : _ram(ram), _active_interruption(false)
  * @brief Outputs debug information about the CPU state.
  * @param cycles Number of executed cycles.
  */
-void CPU::debug(uint32_t cycles)
+auto CPU::debug(uint32_t cycles) -> void
 {
     if (_registers.halt == 0)
     {
@@ -89,7 +89,7 @@ void CPU::debug(uint32_t cycles)
  * @brief Executes one CPU instruction and returns the number of cycles taken.
  * @return The number of cycles taken by the instruction.
  */
-uint8_t CPU::step()
+auto CPU::step() -> uint8_t
 {
     int8_t cycles_count = 1;
     bool actived_interrupt = false;
@@ -122,7 +122,7 @@ uint8_t CPU::step()
  * @brief Loads register values from a map.
  * @param registers_value A map containing register names and their values.
  */
-void CPU::load_registers(const std::map<std::string, int> &registers_value)
+auto CPU::load_registers(const std::map<std::string, int> &registers_value) -> void
 {
     for (auto &item : registers_value)
         if (_register_index.find(item.first) != _register_index.end())
@@ -137,7 +137,7 @@ void CPU::load_registers(const std::map<std::string, int> &registers_value)
  * @brief Returns the current register values as a map.
  * @return A map containing register names and their values.
  */
-std::map<std::string, int> CPU::get_registers()
+auto CPU::get_registers() -> std::map<std::string, int>
 {
     std::map<std::string, int> output;
 
@@ -154,7 +154,7 @@ std::map<std::string, int> CPU::get_registers()
  * @brief Decodes and executes the next instruction.
  * @return The number of cycles taken by the instruction.
  */
-uint8_t CPU::decode()
+auto CPU::decode() -> uint8_t
 {
     uint8_t opcode = _ram[_registers.pc++];
     uint8_t reg = _map_reg[(opcode >> 3) & 0x7];
@@ -714,7 +714,7 @@ uint8_t CPU::decode()
  * @brief Decodes and executes an extended opcode instruction.
  * @return The number of cycles taken by the instruction.
  */
-inline uint8_t CPU::decodeExtendOpcode()
+inline auto CPU::decodeExtendOpcode() -> uint8_t
 {
     uint8_t opcode = _ram[_registers.pc++];
     uint16_t address;
@@ -1083,7 +1083,7 @@ inline uint8_t CPU::decodeExtendOpcode()
  * @param reg The index of the 8-bit register to load into.
  * @param value The value to load into the register.
  */
-inline void CPU::load_register(uint8_t reg, uint8_t value)
+inline auto CPU::load_register(uint8_t reg, uint8_t value) -> void
 {
     _registers.regs8[reg] = value;
 }
@@ -1093,7 +1093,7 @@ inline void CPU::load_register(uint8_t reg, uint8_t value)
  * @param address The memory address to write to.
  * @param value The value to write to the memory address.
  */
-inline void CPU::write_ram(uint16_t address, uint8_t value)
+inline auto CPU::write_ram(uint16_t address, uint8_t value) -> void
 {
     _ram.write(address, value);
 }
@@ -1103,7 +1103,7 @@ inline void CPU::write_ram(uint16_t address, uint8_t value)
  * @param reg The index of the 16-bit register to load into.
  * @param value The value to load into the register.
  */
-inline void CPU::load_register16(uint8_t reg, uint16_t value)
+inline auto CPU::load_register16(uint8_t reg, uint16_t value) -> void
 {
     _registers.regs16[reg] = value;
 }
@@ -1113,7 +1113,7 @@ inline void CPU::load_register16(uint8_t reg, uint16_t value)
  * @param address The starting memory address to write the low byte of the value.
  * @param value The 16-bit value to write to memory.
  */
-inline void CPU::write_ram16(uint16_t address, uint16_t value)
+inline auto CPU::write_ram16(uint16_t address, uint16_t value) -> void
 {
     _ram.write(address++, value & 0xFF);
     _ram.write(address, (value >> 8) & 0xFF);
@@ -1123,7 +1123,7 @@ inline void CPU::write_ram16(uint16_t address, uint16_t value)
  * @brief Pushes the value of the specified 16-bit register onto the stack.
  * @param reg The index of the 16-bit register to push.
  */
-inline void CPU::push(uint8_t reg)
+inline auto CPU::push(uint8_t reg) -> void
 {
     _registers.sp--;
     _ram.write(_registers.sp--, (_registers.regs16[reg] >> 8) & 0xFF);
@@ -1134,7 +1134,7 @@ inline void CPU::push(uint8_t reg)
  * @brief Pops a 16-bit value from the stack into the specified register.
  * @param reg The index of the 16-bit register to pop into.
  */
-inline void CPU::pop(uint8_t reg)
+inline auto CPU::pop(uint8_t reg) -> void
 {
     uint16_t Value = _ram[_registers.sp++];
 
@@ -1147,7 +1147,7 @@ inline void CPU::pop(uint8_t reg)
  * @brief Adds a signed 8-bit value to the stack pointer and stores the result in HL, updating flags.
  * @param value The signed 8-bit value to add to the stack pointer.
  */
-inline void CPU::add_stack(int8_t value)
+inline auto CPU::add_stack(int8_t value) -> void
 {
     uint16_t sp = _registers.sp;
     uint16_t result = sp + value;
@@ -1166,7 +1166,7 @@ inline void CPU::add_stack(int8_t value)
  * @param value The value to add to the accumulator.
  * @param carry The carry value to add (0 or 1).
  */
-inline void CPU::add(uint8_t value, uint8_t carry)
+inline auto CPU::add(uint8_t value, uint8_t carry) -> void
 {
     uint16_t a = _registers.regs8[Reg8::A];
     uint16_t result = a + value + carry;
@@ -1187,7 +1187,7 @@ inline void CPU::add(uint8_t value, uint8_t carry)
  * @param value The value to subtract from the accumulator.
  * @param carry The carry value to subtract (0 or 1).
  */
-inline void CPU::sub(uint8_t value, uint8_t carry)
+inline auto CPU::sub(uint8_t value, uint8_t carry) -> void
 {
     uint8_t a = _registers.regs8[Reg8::A];
 
@@ -1205,7 +1205,7 @@ inline void CPU::sub(uint8_t value, uint8_t carry)
  * @brief Compares the accumulator with a value, updating flags without storing the result.
  * @param value The value to compare with the accumulator.
  */
-inline void CPU::cp(uint8_t value)
+inline auto CPU::cp(uint8_t value) -> void
 {
     uint8_t a = _registers.regs8[Reg8::A];
     uint8_t result = a - value;
@@ -1223,7 +1223,7 @@ inline void CPU::cp(uint8_t value)
  * @brief Increments the specified 8-bit register and updates flags.
  * @param reg The index of the 8-bit register to increment.
  */
-inline void CPU::inc(uint8_t reg)
+inline auto CPU::inc(uint8_t reg) -> void
 {
     uint8_t value = _registers.regs8[reg];
 
@@ -1238,7 +1238,7 @@ inline void CPU::inc(uint8_t reg)
 /**
  * @brief Increments the value at the memory address pointed to by HL and updates flags.
  */
-inline void CPU::inc_hl()
+inline auto CPU::inc_hl() -> void
 {
     uint16_t addr = _registers.regs16[Reg16::HL];
     uint8_t old_value = _ram[addr];
@@ -1256,7 +1256,7 @@ inline void CPU::inc_hl()
  * @brief Decrements the specified 8-bit register and updates flags.
  * @param reg The index of the 8-bit register to decrement.
  */
-inline void CPU::dec(uint8_t reg)
+inline auto CPU::dec(uint8_t reg) -> void
 {
     _registers.regs8[reg]--;
     _registers.regs8[Reg8::F] &= Flags::c;
@@ -1270,7 +1270,7 @@ inline void CPU::dec(uint8_t reg)
 /**
  * @brief Decrements the value at the memory address pointed to by HL and updates flags.
  */
-inline void CPU::dec_hl()
+inline auto CPU::dec_hl() -> void
 {
     uint8_t a = _ram[_registers.regs16[Reg16::HL]];
 
@@ -1288,7 +1288,7 @@ inline void CPU::dec_hl()
  * @brief Performs a bitwise AND between the accumulator and the specified value, updating flags.
  * @param value The value to AND with the accumulator.
  */
-inline void CPU::and_(uint8_t value)
+inline auto CPU::and_(uint8_t value) -> void
 {
     _registers.regs8[Reg8::A] &= value;
     _registers.regs8[Reg8::F] = Flags::h;
@@ -1300,7 +1300,7 @@ inline void CPU::and_(uint8_t value)
  * @brief Performs a bitwise OR between the accumulator and the specified value, updating flags.
  * @param value The value to OR with the accumulator.
  */
-inline void CPU::or_(uint8_t value)
+inline auto CPU::or_(uint8_t value) -> void
 {
     _registers.regs8[Reg8::A] |= value;
     _registers.regs8[Reg8::F] = 0;
@@ -1312,7 +1312,7 @@ inline void CPU::or_(uint8_t value)
  * @brief Performs a bitwise XOR between the accumulator and the specified value, updating flags.
  * @param value The value to XOR with the accumulator.
  */
-inline void CPU::xor_(uint8_t value)
+inline auto CPU::xor_(uint8_t value) -> void
 {
     _registers.regs8[Reg8::A] ^= value;
     _registers.regs8[Reg8::F] = 0;
@@ -1323,7 +1323,7 @@ inline void CPU::xor_(uint8_t value)
 /**
  * @brief Complements the carry flag.
  */
-inline void CPU::ccf()
+inline auto CPU::ccf() -> void
 {
     uint8_t flags = _registers.regs8[Reg8::F];
     _registers.regs8[Reg8::F] = (~flags & 0x10) | (flags & 0x80);
@@ -1332,7 +1332,7 @@ inline void CPU::ccf()
 /**
  * @brief Sets the carry flag to 1.
  */
-inline void CPU::scf()
+inline auto CPU::scf() -> void
 {
     uint8_t flags = _registers.regs8[Reg8::F];
     _registers.regs8[Reg8::F] = 0x10 | (flags & 0x80);
@@ -1341,7 +1341,7 @@ inline void CPU::scf()
 /**
  * @brief Adjusts the accumulator to binary-coded decimal (BCD) after an arithmetic operation.
  */
-inline void CPU::daa()
+inline auto CPU::daa() -> void
 {
     uint16_t a = _registers.regs8[Reg8::A] | ((_registers.regs8[Reg8::F] & 0x7F) << 4);
     uint16_t result = intToBcd[a];
@@ -1357,7 +1357,7 @@ inline void CPU::daa()
 /**
  * @brief Complements the accumulator (inverts all bits).
  */
-inline void CPU::cpl()
+inline auto CPU::cpl() -> void
 {
     _registers.regs8[Reg8::A] = ~_registers.regs8[Reg8::A];
     _registers.regs8[Reg8::F] |= Flags::n;
@@ -1368,7 +1368,7 @@ inline void CPU::cpl()
  * @brief Increments the specified 16-bit register.
  * @param reg The index of the 16-bit register to increment.
  */
-inline void CPU::inc16(uint8_t reg)
+inline auto CPU::inc16(uint8_t reg) -> void
 {
     _registers.regs16[reg]++;
 }
@@ -1377,7 +1377,7 @@ inline void CPU::inc16(uint8_t reg)
  * @brief Decrements the specified 16-bit register.
  * @param reg The index of the 16-bit register to decrement.
  */
-inline void CPU::dec16(uint8_t reg)
+inline auto CPU::dec16(uint8_t reg) -> void
 {
     _registers.regs16[reg]--;
 }
@@ -1386,7 +1386,7 @@ inline void CPU::dec16(uint8_t reg)
  * @brief Adds a 16-bit value to HL and updates flags.
  * @param rr The 16-bit value to add to HL.
  */
-inline void CPU::add_hl(uint16_t rr)
+inline auto CPU::add_hl(uint16_t rr) -> void
 {
     uint32_t hl = _registers.regs16[Reg16::HL];
     uint32_t result = hl + rr;
@@ -1404,7 +1404,7 @@ inline void CPU::add_hl(uint16_t rr)
  * @brief Adds a signed 8-bit value to the stack pointer and updates flags.
  * @param value The signed 8-bit value to add to the stack pointer.
  */
-inline void CPU::add_sp(int8_t value)
+inline auto CPU::add_sp(int8_t value) -> void
 {
     uint16_t sp = _registers.sp;
     uint16_t result = sp + value;
@@ -1424,7 +1424,7 @@ inline void CPU::add_sp(int8_t value)
  * @param zflag Indicates whether the zero flag should be updated if the result is zero.
  * @return The value after rotation.
  */
-inline uint8_t CPU::rotl(uint8_t value, bool zflag)
+inline auto CPU::rotl(uint8_t value, bool zflag) -> uint8_t
 {
     value = (value << 1) | (value >> 7);
     _registers.regs8[Reg8::F] = (value & 1) << 4; // C flag
@@ -1439,7 +1439,7 @@ inline uint8_t CPU::rotl(uint8_t value, bool zflag)
  * @param zflag Indicates whether the zero flag should be updated if the result is zero.
  * @return The value after rotation.
  */
-inline uint8_t CPU::rotlc(uint8_t value, bool zflag)
+inline auto CPU::rotlc(uint8_t value, bool zflag) -> uint8_t
 {
     int8_t carry = (_registers.regs8[Reg8::F] >> 4) & 1;
 
@@ -1456,7 +1456,7 @@ inline uint8_t CPU::rotlc(uint8_t value, bool zflag)
  * @param zflag Indicates whether the zero flag should be updated if the result is zero.
  * @return The value after rotation.
  */
-inline uint8_t CPU::rotr(uint8_t value, bool zflag)
+inline auto CPU::rotr(uint8_t value, bool zflag) -> uint8_t
 {
     value = (value >> 1) | (value << 7);
     _registers.regs8[Reg8::F] = (value >> 3) & 0x10; // C flag
@@ -1471,7 +1471,7 @@ inline uint8_t CPU::rotr(uint8_t value, bool zflag)
  * @param zflag Indicates whether the zero flag should be updated if the result is zero.
  * @return The value after rotation.
  */
-inline uint8_t CPU::rotrc(uint8_t value, bool zflag)
+inline auto CPU::rotrc(uint8_t value, bool zflag) -> uint8_t
 {
     int8_t carry = (_registers.regs8[Reg8::F] >> 4) & 1;
 
@@ -1487,7 +1487,7 @@ inline uint8_t CPU::rotrc(uint8_t value, bool zflag)
  * @param value The value to shift.
  * @return The value after shifting.
  */
-inline uint8_t CPU::shiftl(uint8_t value)
+inline auto CPU::shiftl(uint8_t value) -> uint8_t
 {
     _registers.regs8[Reg8::F] = (value >> 3) & 0x10; // C flag
     value = (value << 1) & 0xFE;
@@ -1501,7 +1501,7 @@ inline uint8_t CPU::shiftl(uint8_t value)
  * @param value The value to shift.
  * @return The value after shifting.
  */
-inline uint8_t CPU::shiftr(uint8_t value)
+inline auto CPU::shiftr(uint8_t value) -> uint8_t
 {
     _registers.regs8[Reg8::F] = (value << 4) & 0x10; // C flag
     value >>= 1;
@@ -1515,7 +1515,7 @@ inline uint8_t CPU::shiftr(uint8_t value)
  * @param value The value to shift.
  * @return The value after shifting.
  */
-inline uint8_t CPU::shiftr2(uint8_t value)
+inline auto CPU::shiftr2(uint8_t value) -> uint8_t
 {
     _registers.regs8[Reg8::F] = (value << 4) & 0x10; // C flag
     value = (value & 0x80) | (value >> 1);
@@ -1529,7 +1529,7 @@ inline uint8_t CPU::shiftr2(uint8_t value)
  * @param value The value whose nibbles are to be swapped.
  * @return The value with swapped nibbles.
  */
-inline uint8_t CPU::swap(uint8_t value)
+inline auto CPU::swap(uint8_t value) -> uint8_t
 {
     value = (value >> 4) | (value << 4);
     _registers.regs8[Reg8::F] = 0;
@@ -1543,7 +1543,7 @@ inline uint8_t CPU::swap(uint8_t value)
  * @param bit The bit position to test (0-7).
  * @param value The value in which to test the bit.
  */
-inline void CPU::bit_test(uint8_t bit, uint8_t value)
+inline auto CPU::bit_test(uint8_t bit, uint8_t value) -> void
 {
     value &= (1 << bit);
     _registers.regs8[Reg8::F] &= Flags::c;
@@ -1558,7 +1558,7 @@ inline void CPU::bit_test(uint8_t bit, uint8_t value)
  * @param value The value in which to set the bit.
  * @return The value with the specified bit set to 1.
  */
-uint8_t CPU::bit_set(uint8_t bit, uint8_t value)
+auto CPU::bit_set(uint8_t bit, uint8_t value) -> uint8_t
 {
     return (value | (1 << bit));
 }
@@ -1569,7 +1569,7 @@ uint8_t CPU::bit_set(uint8_t bit, uint8_t value)
  * @param value The value in which to reset the bit.
  * @return The value with the specified bit reset to 0.
  */
-uint8_t CPU::bit_reset(uint8_t bit, uint8_t value)
+auto CPU::bit_reset(uint8_t bit, uint8_t value) -> uint8_t
 {
     value &= ~(1 << bit);
     return (value);
@@ -1579,7 +1579,7 @@ uint8_t CPU::bit_reset(uint8_t bit, uint8_t value)
  * @brief Jumps to the specified address by updating the program counter.
  * @param addr The address to jump to.
  */
-inline void CPU::jump(uint16_t addr)
+inline auto CPU::jump(uint16_t addr) -> void
 {
     _registers.pc = addr;
 }
@@ -1589,7 +1589,7 @@ inline void CPU::jump(uint16_t addr)
  * @param opcode The opcode determining the condition.
  * @param addr The address to jump to if the condition is met.
  */
-inline bool CPU::jump_conditionnal(uint8_t opcode, uint16_t addr)
+inline auto CPU::jump_conditionnal(uint8_t opcode, uint16_t addr) -> bool
 {
     uint8_t cc = (opcode >> 3) & 0x3;
     uint8_t c = (_registers.regs8[Reg8::F] & Flags::c) >> 4;
@@ -1607,7 +1607,7 @@ inline bool CPU::jump_conditionnal(uint8_t opcode, uint16_t addr)
  * @brief Calls a subroutine at the specified address, pushing the current PC onto the stack.
  * @param addr The address of the subroutine to call.
  */
-inline void CPU::call(uint16_t addr)
+inline auto CPU::call(uint16_t addr) -> void
 {
     _registers.sp--;
     _ram.write(_registers.sp--, (_registers.pc >> 8) & 0xFF);
@@ -1620,7 +1620,7 @@ inline void CPU::call(uint16_t addr)
  * @param opcode The opcode determining the condition.
  * @param addr The address to call if the condition is met.
  */
-inline void CPU::call_conditionnal(uint8_t opcode, uint16_t addr)
+inline auto CPU::call_conditionnal(uint8_t opcode, uint16_t addr) -> void
 {
     uint8_t cc = (opcode >> 3) & 0x3;
     uint8_t c = (_registers.regs8[Reg8::F] & Flags::c) >> 4;
@@ -1633,7 +1633,7 @@ inline void CPU::call_conditionnal(uint8_t opcode, uint16_t addr)
 /**
  * @brief Returns from a subroutine by popping the PC from the stack.
  */
-inline void CPU::ret()
+inline auto CPU::ret() -> void
 {
     uint16_t addr = _ram[_registers.sp++];
 
@@ -1644,7 +1644,7 @@ inline void CPU::ret()
 /**
  * @brief Returns from a subroutine by popping the PC from the stack.
  */
-inline void CPU::reti()
+inline auto CPU::reti() -> void
 {
     uint16_t addr = _ram[_registers.sp++];
 
@@ -1658,7 +1658,7 @@ inline void CPU::reti()
  * @param opcode The opcode determining the condition.
  * @return `true` if the return was performed, `false` otherwise.
  */
-inline bool CPU::ret_conditionnal(uint8_t opcode)
+inline auto CPU::ret_conditionnal(uint8_t opcode) -> bool
 {
     uint8_t cc = (opcode >> 3) & 0x3;
     uint8_t c = (_registers.regs8[Reg8::F] & Flags::c) >> 4;
@@ -1675,7 +1675,7 @@ inline bool CPU::ret_conditionnal(uint8_t opcode)
 /**
  * @brief Puts the CPU into a halted state.
  */
-inline void CPU::halt()
+inline auto CPU::halt() -> void
 {
     _registers.halt = 1;
 }
@@ -1683,7 +1683,7 @@ inline void CPU::halt()
 /**
  * @brief Stops the CPU and resets the divider register.
  */
-inline void CPU::stop()
+inline auto CPU::stop() -> void
 {
     _ram.write_register(Timer::Register::DIV, 0);
 }
@@ -1691,7 +1691,7 @@ inline void CPU::stop()
 /**
  * @brief Disables interrupts.
  */
-inline void CPU::di()
+inline auto CPU::di() -> void
 {
     _registers.ime = 0;
 }
@@ -1699,7 +1699,7 @@ inline void CPU::di()
 /**
  * @brief Enables interrupts.
  */
-inline void CPU::ei()
+inline auto CPU::ei() -> void
 {
     _registers.ime = 1;
     _active_interruption = true;
@@ -1708,7 +1708,7 @@ inline void CPU::ei()
 /**
  * @brief Performs a no-operation (NOP).
  */
-inline void CPU::nop()
+inline auto CPU::nop() -> void
 {
 }
 
@@ -1718,7 +1718,7 @@ inline void CPU::nop()
  * @param addr The address of the interrupt handler.
  * @return The number of cycles taken (5).
  */
-inline uint8_t CPU::active_interrupt(uint8_t bit, uint16_t addr)
+inline auto CPU::active_interrupt(uint8_t bit, uint16_t addr) -> uint8_t
 {
     _ram.write_register(Register::IF, _ram[Register::IF] & ~bit);
     di();
