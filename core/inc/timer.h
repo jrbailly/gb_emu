@@ -17,12 +17,12 @@ class Timer
     };
     Timer();
     auto init(RamBus &ram) -> void;
-    auto step(RamBus &ram, int cycles_count) -> void;
+    auto step(RamBus &ram, uint32_t cycles_count) -> void;
 
   private:
-    int _next_cycle_div;
-    int _next_cycle_tima;
-    int _cycle_tima;
-    int _clocks_cycles[4];
+    int32_t _next_cycle_div;
+    int32_t _next_cycle_tima;
+    uint32_t _cycle_tima;
+    uint32_t _clocks_cycles[4];
 };
 #endif

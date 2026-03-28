@@ -19,12 +19,12 @@ HighpassFilter::HighpassFilter()
  * @param channel The audio channel (0 or 1).
  * @return The filtered audio sample value.
  */
-auto HighpassFilter::filter(std::span<int16_t> buffer, int channel_offset, int step) -> void
+auto HighpassFilter::filter(std::span<int16_t> buffer, std::size_t channel_offset, std::size_t step) -> void
 {
-    int i;
+    std::size_t i;
     float out = 0;
 
-    for (int j = channel_offset; j < (int)buffer.size(); j += step)
+    for (std::size_t j = channel_offset; j < buffer.size(); j += step)
     {
         float value = buffer[j];
         out = 0;

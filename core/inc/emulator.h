@@ -21,7 +21,7 @@ class Emulator
   public:
     Emulator(const Config &Configuration);
     auto init() -> void;
-    auto step_frame() -> int;
+    auto step_frame() -> int32_t;
     auto set_input(int pad, int button) -> void;
     auto save_state() -> void;
     auto load_state() -> void;

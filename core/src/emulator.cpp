@@ -39,7 +39,7 @@ auto Emulator::init() -> void
  * @return Number of microseconds the caller should wait to maintain 60 FPS.
  *         Returns 0 if the frame took longer than the target duration.
  */
-auto Emulator::step_frame() -> int
+auto Emulator::step_frame() -> int32_t
 {
     uint32_t cycles = 0;
 

@@ -3,13 +3,13 @@
 #include <cstdint>
 #include <span>
 
-static constexpr int npole = 1;
+static constexpr std::size_t npole = 1;
 
 class HighpassFilter
 {
   public:
     HighpassFilter();
-    auto filter(std::span<int16_t> buffer, int channel_offset, int step) -> void;
+    auto filter(std::span<int16_t> buffer, std::size_t channel_offset, std::size_t step) -> void;
 
   private:
     float _gain;

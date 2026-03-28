@@ -82,7 +82,7 @@ auto LCD::init(RamBus &ram) -> void
  *
  * @param cycles_count Number of cycles to advance the simulation
  */
-auto LCD::step(int cycles_count) -> void
+auto LCD::step(uint32_t cycles_count) -> void
 {
     unsigned char ly;
 

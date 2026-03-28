@@ -1,6 +1,7 @@
 #ifndef _IRECORD_H_
 #define _IRECORD_H_
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -31,7 +32,7 @@ class IRecord
      * @param button Output: button state for the current frame.
      * @return true if inputs were available, false if the record is empty.
      */
-    auto get_input(int &pad, int &button) -> bool;
+    auto get_input(uint8_t &pad, uint8_t &button) -> bool;
 
     /**
      * @brief Reset the playback position to the beginning of the record.
@@ -39,11 +40,11 @@ class IRecord
     auto reset() -> void;
 
   protected:
-    std::vector<int> _dpads_records;   ///< D-pad state for each recorded frame.
-    std::vector<int> _buttons_records; ///< Button state for each recorded frame.
+    std::vector<uint8_t> _dpads_records;   ///< D-pad state for each recorded frame.
+    std::vector<uint8_t> _buttons_records; ///< Button state for each recorded frame.
 
   private:
-    int _record_index = 0; ///< Current playback position.
+    std::size_t _record_index = 0; ///< Current playback position.
 };
 
 #endif

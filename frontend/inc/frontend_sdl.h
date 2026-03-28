@@ -14,10 +14,10 @@ class FrontendSDL : public IFrontend
   public:
     FrontendSDL(const Config &config);
     ~FrontendSDL();
-    auto get_input(int &pad, int &button) -> bool override;
+    auto get_input(uint8_t &pad, uint8_t &button) -> bool override;
     auto pop_save_request() -> bool override;
     auto pop_load_request() -> bool override;
-    auto delay(int us) -> void override;
+    auto delay(int32_t us) -> void override;
     auto play_audio(std::span<const int16_t> buffer) -> void override;
     auto render(std::span<const uint32_t> frame_buffer) -> void override;
 
@@ -33,8 +33,8 @@ class FrontendSDL : public IFrontend
     SDL_Renderer *_renderer = nullptr;
     SDL_Texture *_texture_viewer = nullptr;
     HighpassFilter _filter[channels];
-    int _dpads;
-    int _buttons;
+    uint8_t _dpads;
+    uint8_t _buttons;
     std::map<int, int> _dpads_binding_keys;
     std::map<int, int> _dpads_binding_gamepad;
     std::map<int, int> _buttons_binding_keys;

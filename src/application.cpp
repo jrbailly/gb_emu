@@ -22,8 +22,8 @@ auto Application::init(const Config &configuration) -> void
 
 auto Application::main_loop() -> void
 {
-    int pad = 0;
-    int button = 0;
+    uint8_t pad = 0;
+    uint8_t button = 0;
 
     while (!_quit)
     {

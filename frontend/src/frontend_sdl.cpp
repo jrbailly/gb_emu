@@ -109,7 +109,7 @@ FrontendSDL::~FrontendSDL()
  * @param button Output: current button bitmask.
  * @return true if a quit event was received.
  */
-auto FrontendSDL::get_input(int &pad, int &button) -> bool
+auto FrontendSDL::get_input(uint8_t &pad, uint8_t &button) -> bool
 {
     SDL_Event event;
 
@@ -143,9 +143,9 @@ auto FrontendSDL::get_input(int &pad, int &button) -> bool
             break;
         case SDL_EVENT_GAMEPAD_BUTTON_UP:
             if (_dpads_binding_gamepad.count(event.gbutton.button))
-                _dpads |= _dpads_binding_gamepad[event.gbutton.button];
+                _dpads |= static_cast<uint8_t>(_dpads_binding_gamepad[event.gbutton.button]);
             if (_buttons_binding_gamepad.count(event.gbutton.button))
-                _buttons |= _buttons_binding_gamepad[event.gbutton.button];
+                _buttons |= static_cast<uint8_t>(_buttons_binding_gamepad[event.gbutton.button]);
             break;
         default:
             break;
@@ -182,7 +182,7 @@ auto FrontendSDL::pop_load_request() -> bool
  * @brief Waits for the given number of microseconds using SDL_DelayPrecise.
  * @param us Number of microseconds to wait.
  */
-auto FrontendSDL::delay(int us) -> void
+auto FrontendSDL::delay(int32_t us) -> void
 {
     SDL_DelayPrecise(static_cast<double>(us) * 1000.0);
 }

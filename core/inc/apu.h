@@ -92,8 +92,8 @@ class APU
     int _next_cycle;
     int _timer_cycle;
     int _timer_count;
-    int _buffer_index;
-    int _audio_ready_size;
+    std::size_t _buffer_index;
+    std::size_t _audio_ready_size;
     uint16_t _lfsr;
     std::array<float, 4> _duty_cycles;
     std::array<Channel, 4> _channels;

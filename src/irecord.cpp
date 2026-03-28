@@ -10,7 +10,7 @@
  * @param button Output: button state for the current frame.
  * @return true if inputs were available, false if the record is empty.
  */
-auto IRecord::get_input(int &pad, int &button) -> bool
+auto IRecord::get_input(uint8_t &pad, uint8_t &button) -> bool
 {
     if (_dpads_records.empty())
         return false;

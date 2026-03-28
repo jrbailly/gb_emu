@@ -112,7 +112,7 @@ class LCD
     LCD(RamBus &ram);
     virtual ~LCD();
     auto init(RamBus &ram) -> void;
-    auto step(int cycles_count) -> void;
+    auto step(uint32_t cycles_count) -> void;
     auto load_state() -> void;
     inline auto get_frame_buffer() const -> std::span<const uint32_t>
     {
@@ -135,9 +135,9 @@ class LCD
   private:
     RamBus &_ram;
     bool _stat_interrupt;
-    int _op_cycle;
-    int _current_op_cycle;
-    int _wnd_line;
+    int32_t _op_cycle;
+    int32_t _current_op_cycle;
+    uint32_t _wnd_line;
     Mode _current_mode;
     Mode _next_mode;
     unsigned int _BGP0[4];

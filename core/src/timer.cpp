@@ -44,7 +44,7 @@ auto Timer::init(RamBus &ram) -> void
  * @param ram Reference to the RAM bus for register access
  * @param cycles_count Number of CPU cycles elapsed since last call
  */
-auto Timer::step(RamBus &ram, int cycles_count) -> void
+auto Timer::step(RamBus &ram, uint32_t cycles_count) -> void
 {
     _next_cycle_div -= cycles_count;
     _next_cycle_tima -= cycles_count;
