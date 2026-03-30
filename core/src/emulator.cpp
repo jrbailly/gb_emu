@@ -36,15 +36,13 @@ auto Emulator::init() -> void
 
 /**
  * @brief Runs one frame of emulation.
- * @return Number of microseconds the caller should wait to maintain 60 FPS.
- *         Returns 0 if the frame took longer than the target duration.
  */
-auto Emulator::step_frame() -> int32_t
+auto Emulator::step_frame(uint32_t refresh_rate) -> void
 {
     uint32_t cycles = 0;
+    uint32_t frame_cycle_count = cpu_freq / refresh_rate;
 
-    auto start_time = std::chrono::high_resolution_clock::now();
-
+    _apu->flush();
     while (_cycles_count < frame_cycle_count)
     {
         //        _cpu->debug(_cycles_count);
@@ -54,11 +52,7 @@ auto Emulator::step_frame() -> int32_t
         _timer->step(_ram, cycles);
         _cycles_count += cycles;
     }
-    _apu->flush();
     _cycles_count -= frame_cycle_count;
-    auto end_time = std::chrono::high_resolution_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
-    return (frame_duration - elapsed);
 }
 
 auto Emulator::set_input(int pad, int button) -> void

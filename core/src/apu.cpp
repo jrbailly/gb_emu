@@ -12,7 +12,6 @@ APU::APU(RamBus &ram) : _ram(ram)
     _timer_cycle = timer_period;
     _timer_count = 0;
     _buffer_index = 0;
-    _audio_ready_size = 0;
     _duty_cycles[0] = 0.12;
     _duty_cycles[1] = 0.25;
     _duty_cycles[2] = 0.5;
@@ -82,7 +81,6 @@ auto APU::step(uint32_t cycles_count) -> void
  */
 auto APU::flush() -> void
 {
-    _audio_ready_size = _buffer_index;
     _buffer_index = 0;
 }
 
@@ -108,7 +106,7 @@ auto APU::load_state() -> void
  */
 auto APU::process_ch1() -> void
 {
-    int duty = _ram[NR11] >> 6;
+    uint8_t duty = _ram[NR11] >> 6;
     int16_t value = 0;
 
     if (_channels[0].phase >= 1.0)
@@ -124,7 +122,7 @@ auto APU::process_ch1() -> void
  */
 auto APU::process_ch2() -> void
 {
-    int duty = _ram[NR21] >> 6;
+    uint8_t duty = _ram[NR21] >> 6;
     int16_t value = 0;
 
     if (_channels[1].phase >= 1.0)

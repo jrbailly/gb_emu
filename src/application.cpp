@@ -37,9 +37,10 @@ auto Application::main_loop() -> void
         if (!_quit)
         {
             _emulator->set_input(pad, button);
-            _frontend->delay(_emulator->step_frame());
+            _emulator->step_frame(_frontend->get_refresh_rate());
             _frontend->play_audio(_emulator->get_audio_buffer());
             _frontend->render(_emulator->get_frame_buffer());
+            _frontend->delay();
         }
     }
 }

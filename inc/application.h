@@ -5,7 +5,7 @@
 #include "ifrontend.h"
 #include "irecord.h"
 
-static constexpr std::string app_version = "0.1.0";
+static constexpr std::string_view app_version = "0.1.0";
 
 class Application
 {

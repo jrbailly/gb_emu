@@ -9,6 +9,8 @@
 #include <SDL3/SDL.h>
 #include <map>
 
+static constexpr int refresh_rate = 60;
+
 class FrontendSDL : public IFrontend
 {
   public:
@@ -17,9 +19,13 @@ class FrontendSDL : public IFrontend
     auto get_input(uint8_t &pad, uint8_t &button) -> bool override;
     auto pop_save_request() -> bool override;
     auto pop_load_request() -> bool override;
-    auto delay(int32_t us) -> void override;
+    auto delay() -> void override;
     auto play_audio(std::span<const int16_t> buffer) -> void override;
     auto render(std::span<const uint32_t> frame_buffer) -> void override;
+    auto get_refresh_rate() -> uint32_t override
+    {
+        return (refresh_rate);
+    };
 
   private:
     auto init_audio() -> void;
@@ -42,6 +48,8 @@ class FrontendSDL : public IFrontend
     bool _save_requested;
     bool _load_requested;
     int _scale;
+    uint64_t _next_frame;
+    uint64_t _increment_frame;
 };
 
 #endif

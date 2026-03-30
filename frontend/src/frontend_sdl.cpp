@@ -1,5 +1,6 @@
 #include "frontend_sdl.h"
 #include "controllers.h"
+#include "emulator.h"
 #include <format>
 #include <vector>
 
@@ -16,6 +17,8 @@ FrontendSDL::FrontendSDL(const Config &config)
     init_audio();
     init_graphics();
     init_controllers();
+    _increment_frame = SDL_GetPerformanceFrequency() / refresh_rate;
+    _next_frame = SDL_GetPerformanceCounter() + _increment_frame;
 }
 
 /**
@@ -180,11 +183,13 @@ auto FrontendSDL::pop_load_request() -> bool
 
 /**
  * @brief Waits for the given number of microseconds using SDL_DelayPrecise.
- * @param us Number of microseconds to wait.
  */
-auto FrontendSDL::delay(int32_t us) -> void
+auto FrontendSDL::delay() -> void
 {
-    SDL_DelayPrecise(static_cast<double>(us) * 1000.0);
+    auto wait = ((_next_frame - SDL_GetPerformanceCounter()) * 1000000000) / SDL_GetPerformanceFrequency();
+
+    SDL_DelayPrecise(wait);
+    _next_frame += _increment_frame;
 }
 
 /**
@@ -194,6 +199,7 @@ auto FrontendSDL::delay(int32_t us) -> void
 auto FrontendSDL::play_audio(std::span<const int16_t> buffer) -> void
 {
     std::vector<int16_t> copy(buffer.begin(), buffer.end());
+
     if (_active_filter)
         for (int channel = 0; channel < channels; ++channel)
             _filter[channel].filter(std::span<int16_t>(copy), channel, channels);

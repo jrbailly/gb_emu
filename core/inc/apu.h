@@ -7,7 +7,7 @@
 
 static constexpr float apu_freq = cpu_freq / 4.0;
 static constexpr float samplerate = 44100;
-static constexpr int sample_period = cpu_freq / samplerate;
+static constexpr float sample_period = cpu_freq / samplerate;
 static constexpr int timer_period = cpu_freq / 256;
 static constexpr int sweep_div = 2;
 static constexpr int enveloppe_div = 4;
@@ -59,17 +59,14 @@ class APU
         NR52 = 0xFF26,
         WAVE_RAM = 0xFF30,
     };
-    using AudioBuffer = std::array<int16_t, audio_buffer_size * channels>;
-    using AudioView = std::span<const int16_t>;
-
     APU(RamBus &ram);
     auto init(RamBus &ram) -> void;
     auto step(uint32_t cycles_count) -> void;
     auto flush() -> void;
     auto load_state() -> void;
-    inline auto get_audio_buffer() const -> AudioView
+    inline auto get_audio_buffer() const -> std::span<const int16_t>
     {
-        return AudioView{_buffer.data(), static_cast<std::size_t>(_audio_ready_size)};
+        return {_buffer.data(), _buffer_index};
     }
 
   private:
@@ -89,15 +86,14 @@ class APU
 
   private:
     RamBus &_ram;
-    int _next_cycle;
+    float _next_cycle;
     int _timer_cycle;
     int _timer_count;
     std::size_t _buffer_index;
-    std::size_t _audio_ready_size;
     uint16_t _lfsr;
     std::array<float, 4> _duty_cycles;
     std::array<Channel, 4> _channels;
-    AudioBuffer _buffer;
+    std::array<int16_t, audio_buffer_size * channels> _buffer;
 };
 
 #endif
