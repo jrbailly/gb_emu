@@ -15,6 +15,7 @@ class IFrontend
     virtual auto play_audio(std::span<const int16_t> buffer) -> void = 0;
     virtual auto render(std::span<const uint32_t> frame_buffer) -> void = 0;
     virtual auto get_refresh_rate() -> uint32_t = 0;
+    virtual auto get_samplerate() -> uint32_t = 0;
 };
 
 #endif

@@ -6,8 +6,6 @@
 #include <span>
 
 static constexpr float apu_freq = cpu_freq / 4.0;
-static constexpr float samplerate = 44100;
-static constexpr float sample_period = cpu_freq / samplerate;
 static constexpr int timer_period = cpu_freq / 256;
 static constexpr int sweep_div = 2;
 static constexpr int enveloppe_div = 4;
@@ -61,6 +59,7 @@ class APU
     };
     APU(RamBus &ram);
     auto init(RamBus &ram) -> void;
+    auto set_samplerate(float samplerate) -> void;
     auto step(uint32_t cycles_count) -> void;
     auto flush() -> void;
     auto load_state() -> void;
@@ -86,6 +85,8 @@ class APU
 
   private:
     RamBus &_ram;
+    float _samplerate;
+    float _sample_period;
     float _next_cycle;
     int _timer_cycle;
     int _timer_count;

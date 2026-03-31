@@ -13,6 +13,7 @@ auto Application::init(const Config &configuration) -> void
     _frontend = std::make_unique<FrontendSDL>(configuration);
     _emulator = std::make_unique<Emulator>(configuration);
     _emulator->init();
+    _emulator->set_samplerate(_frontend->get_samplerate());
     if (!configuration._recordfile.empty())
     {
         _record = std::make_unique<VbmRecord>();

@@ -60,6 +60,11 @@ auto Emulator::set_input(int pad, int button) -> void
     _controllers->set_input(pad, button);
 }
 
+auto Emulator::set_samplerate(float samplerate) -> void
+{
+    _apu->set_samplerate(samplerate);
+}
+
 auto Emulator::save_state() -> void
 {
     nlohmann::json state;

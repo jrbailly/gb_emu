@@ -10,6 +10,7 @@
 #include <map>
 
 static constexpr int refresh_rate = 60;
+static constexpr int samplerate = 44100;
 
 class FrontendSDL : public IFrontend
 {
@@ -25,6 +26,10 @@ class FrontendSDL : public IFrontend
     auto get_refresh_rate() -> uint32_t override
     {
         return (refresh_rate);
+    };
+    auto get_samplerate() -> uint32_t override
+    {
+        return samplerate;
     };
 
   private:

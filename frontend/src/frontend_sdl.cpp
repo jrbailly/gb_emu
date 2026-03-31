@@ -30,7 +30,7 @@ auto FrontendSDL::init_audio() -> void
 
     spec.format = SDL_AUDIO_S16;
     spec.channels = channels;
-    spec.freq = (int)samplerate;
+    spec.freq = samplerate;
     _audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
     if (!_audio_stream)
         throw std::runtime_error(std::format("SDL_OpenAudioDeviceStream : {}", SDL_GetError()));

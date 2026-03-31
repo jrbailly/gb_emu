@@ -8,7 +8,9 @@
  */
 APU::APU(RamBus &ram) : _ram(ram)
 {
-    _next_cycle = sample_period;
+    _samplerate = 0;
+    _sample_period = 0;
+    _next_cycle = 0;
     _timer_cycle = timer_period;
     _timer_count = 0;
     _buffer_index = 0;
@@ -62,7 +64,7 @@ auto APU::step(uint32_t cycles_count) -> void
                 if (_ram[NR52] & (1 << i))
                     _channels[i].process();
         mixer();
-        _next_cycle += sample_period;
+        _next_cycle += _sample_period;
     }
     if (_timer_cycle <= 0)
     {
@@ -99,6 +101,17 @@ auto APU::load_state() -> void
             trigger(i);
         reg += 0x05;
     }
+}
+
+/**
+ * @brief Sets the output sample rate and recomputes the sample period.
+ * @param samplerate The desired sample rate in Hz.
+ */
+auto APU::set_samplerate(float samplerate) -> void
+{
+    _samplerate = samplerate;
+    _sample_period = cpu_freq / _samplerate;
+    _next_cycle = _sample_period;
 }
 
 /**
@@ -205,7 +218,7 @@ auto APU::trigger_ch1() -> void
     int sweep_time = (_ram[NR10] >> 4) & 0x7;
     int period = ((_ram[NR14] & 0x7) << 8) | _ram[NR13];
 
-    _channels[0].increment = ((apu_freq / pulse_samples) / (2048.0 - period)) / samplerate;
+    _channels[0].increment = ((apu_freq / pulse_samples) / (2048.0 - period)) / _samplerate;
     _channels[0].sweep_count = sweep_time;
 }
 
@@ -216,7 +229,7 @@ auto APU::trigger_ch2() -> void
 {
     int period = ((_ram[NR24] & 0x7) << 8) | _ram[NR23];
 
-    _channels[1].increment = ((apu_freq / pulse_samples) / (2048.0 - period)) / samplerate;
+    _channels[1].increment = ((apu_freq / pulse_samples) / (2048.0 - period)) / _samplerate;
 }
 
 /**
@@ -226,7 +239,7 @@ auto APU::trigger_ch3() -> void
 {
     int period = ((_ram[NR34] & 0x7) << 8) | _ram[NR33];
 
-    _channels[2].increment = (65536.0 / (2048.0 - period)) / samplerate;
+    _channels[2].increment = (65536.0 / (2048.0 - period)) / _samplerate;
     _channels[2].sweep_pace = 0;
     switch ((_ram[NR32] >> 5) & 0x3)
     {
@@ -255,7 +268,7 @@ auto APU::trigger_ch4() -> void
 
     if (divider == 0)
         divider = 1;
-    _channels[3].increment = (262144 / (divider * (1 << clock_shift))) / samplerate;
+    _channels[3].increment = (262144 / (divider * (1 << clock_shift))) / _samplerate;
     _lfsr = 0xFFFF;
 }
 
@@ -276,7 +289,7 @@ auto APU::update_sweep() -> void
             freq = freq - (freq / (1 << step));
         else
             freq = freq + (freq / (1 << step));
-        _channels[0].increment = ((apu_freq / pulse_samples) / (2048.0 - freq)) / samplerate;
+        _channels[0].increment = ((apu_freq / pulse_samples) / (2048.0 - freq)) / _samplerate;
         if (freq > 0x7FF)
             _ram.write_register(NR52, _ram[NR52] & 0xFE);
         _ram.write_register(Register::NR13, freq & 0xFF);
@@ -331,23 +344,21 @@ auto APU::update_timer() -> void
  */
 auto APU::mixer() -> void
 {
-    int16_t value[channels] = {0, 0};
-    int panning = _ram[NR51];
-    int master_volume = _ram[NR50];
+    int16_t value = 0;
+    uint8_t enable = _ram[NR52];
+    uint8_t panning = _ram[NR51];
+    uint8_t master_volume = _ram[NR50];
+    uint8_t channel_panning = panning >> 4;
+    uint8_t channel_volume = (master_volume >> 4) & 0x7;
 
     for (int i = 0; i < channels; i++)
     {
-        value[i] = 0;
+        value = 0;
         for (int j = 0; j < 4; ++j)
-        {
-            if ((panning & (1 << j)) && (_ram[NR52] & (1 << j)))
-                value[i] += _channels[j].value;
-        }
-        value[i] *= 1 + (master_volume & 0x7);
-        panning >>= 4;
-        master_volume >>= 4;
+            if ((channel_panning & (1 << j)) && (enable & (1 << j)))
+                value += _channels[j].value;
+        _buffer[_buffer_index++] = -(value * (1 + channel_volume)) * 16.0;
+        channel_panning = panning & 0xF;
+        channel_volume = master_volume & 0x7;
     }
-    _buffer[_buffer_index] = -(value[1] * 16.0);
-    _buffer[_buffer_index + 1] = -(value[0] * 16.0);
-    _buffer_index = (_buffer_index + 2) % audio_buffer_size;
 }

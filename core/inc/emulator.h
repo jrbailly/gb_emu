@@ -19,6 +19,7 @@ class Emulator
     auto init() -> void;
     auto step_frame(uint32_t refresh_rate) -> void;
     auto set_input(int pad, int button) -> void;
+    auto set_samplerate(float samplerate) -> void;
     auto save_state() -> void;
     auto load_state() -> void;
     inline auto get_audio_buffer() const -> std::span<const int16_t>
