@@ -1685,7 +1685,6 @@ inline auto CPU::halt() -> void
  */
 inline auto CPU::stop() -> void
 {
-    _registers.halt = 1;
     _registers.pc++;
     _ram.write_register(Timer::Register::DIV, 0);
     _ram.write_register(CPU::Register::IE, 0);

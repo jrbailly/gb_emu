@@ -31,6 +31,16 @@ To compile this project, ensure you have the following tools and libraries insta
     cmake ..
     make
 
+## Tests
+
+### CPU unit tests
+
+Each SM83 instruction is covered by a unit test: registers, memory and T-cycle count are verified against a reference state, including both taken and not-taken paths for conditional instructions.
+
+### Test ROMs
+
+- **Blargg's cpu_instrs**: validates all CPU instructions against real hardware behaviour
+
 ## Project Status
 This project is currently under development.
 
