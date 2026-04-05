@@ -82,4 +82,4 @@ TEST_P(CpuInstructionTest, RunTestFromJson)
 }
 
 INSTANTIATE_TEST_SUITE_P(CpuInstructionTests, CpuInstructionTest,
-                         ::testing::ValuesIn(GetJsonFiles("../tests/sm83_tests")));
+                         ::testing::ValuesIn(GetJsonFiles("../tests/cpu_tests")));

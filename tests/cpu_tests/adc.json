@@ -1,0 +1,40 @@
+[
+  { "name": "0x88 ADC A,B  CY=0 Z+H+CY",                    "initial": { "a": 58,  "b": 198, "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 136]] }, "final": { "a": 0,   "f": 176, "pc": 1 } },
+  { "name": "0x88 ADC A,B  CY=1 no flags carry consumed",    "initial": { "a": 2,   "b": 3,   "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 136]] }, "final": { "a": 6,   "f": 0,   "pc": 1 } },
+
+  { "name": "0x89 ADC A,C  CY=0 H only",                    "initial": { "a": 8,   "c": 8,   "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 137]] }, "final": { "a": 16,  "f": 32,  "pc": 1 } },
+  { "name": "0x89 ADC A,C  CY=1 H caused by carry",         "initial": { "a": 14,  "c": 1,   "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 137]] }, "final": { "a": 16,  "f": 32,  "pc": 1 } },
+
+  { "name": "0x8A ADC A,D  CY=0 CY only",                   "initial": { "a": 240, "d": 32,  "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 138]] }, "final": { "a": 16,  "f": 16,  "pc": 1 } },
+  { "name": "0x8A ADC A,D  CY=1 carry prevents Z",          "initial": { "a": 240, "d": 16,  "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 138]] }, "final": { "a": 1,   "f": 16,  "pc": 1 } },
+
+  { "name": "0x8B ADC A,E  CY=1 H only (example)",          "initial": { "a": 225, "e": 15,  "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 139]] }, "final": { "a": 241, "f": 32,  "pc": 1 } },
+  { "name": "0x8B ADC A,E  CY=0 no flags",                  "initial": { "a": 10,  "e": 5,   "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 139]] }, "final": { "a": 15,  "f": 0,   "pc": 1 } },
+
+  { "name": "0x8C ADC A,H  CY=0 Z+CY",                     "initial": { "a": 128, "h": 128, "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 140]] }, "final": { "a": 0,   "f": 144, "pc": 1 } },
+  { "name": "0x8C ADC A,H  CY=1 carry causes overflow Z+H+CY","initial": { "a": 254, "h": 1,   "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 140]] }, "final": { "a": 0,   "f": 176, "pc": 1 } },
+
+  { "name": "0x8D ADC A,L  CY=0 H+CY",                     "initial": { "a": 170, "l": 102, "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 141]] }, "final": { "a": 16,  "f": 48,  "pc": 1 } },
+  { "name": "0x8D ADC A,L  CY=1 all flags reset",          "initial": { "a": 2,   "l": 3,   "f": 240, "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 141]] }, "final": { "a": 6,   "f": 0,   "pc": 1 } },
+
+  { "name": "0x8F ADC A,A  CY=0 H+CY",                     "initial": { "a": 136,            "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 143]] }, "final": { "a": 16,  "f": 48,  "pc": 1 } },
+  { "name": "0x8F ADC A,A  CY=1 carry prevents Z",         "initial": { "a": 0,               "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 143]] }, "final": { "a": 1,   "f": 0,   "pc": 1 } },
+
+  { "name": "0xCE ADC A,n  CY=0 no flags N reset",         "initial": { "a": 2,               "f": 224, "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 206], [1, 3]]   }, "final": { "a": 5,   "f": 0,   "pc": 2 } },
+  { "name": "0xCE ADC A,n  CY=0 Z+CY",                     "initial": { "a": 128,             "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 206], [1, 128]] }, "final": { "a": 0,   "f": 144, "pc": 2 } },
+  { "name": "0xCE ADC A,n  CY=0 H only",                   "initial": { "a": 8,               "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 206], [1, 8]]   }, "final": { "a": 16,  "f": 32,  "pc": 2 } },
+  { "name": "0xCE ADC A,n  CY=0 Z+H+CY",                  "initial": { "a": 255,             "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 206], [1, 1]]   }, "final": { "a": 0,   "f": 176, "pc": 2 } },
+  { "name": "0xCE ADC A,n  CY=1 all flags reset",          "initial": { "a": 2,               "f": 240, "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 206], [1, 3]]   }, "final": { "a": 6,   "f": 0,   "pc": 2 } },
+  { "name": "0xCE ADC A,n  CY=1 H caused by carry",        "initial": { "a": 14,              "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 206], [1, 1]]   }, "final": { "a": 16,  "f": 32,  "pc": 2 } },
+  { "name": "0xCE ADC A,n  CY=1 carry prevents Z",         "initial": { "a": 240,             "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 206], [1, 16]]  }, "final": { "a": 1,   "f": 16,  "pc": 2 } },
+  { "name": "0xCE ADC A,n  CY=1 carry causes overflow",    "initial": { "a": 254,             "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 206], [1, 1]]   }, "final": { "a": 0,   "f": 176, "pc": 2 } },
+
+  { "name": "0x8E ADC A,(HL) CY=0 no flags N reset",       "initial": { "a": 2,   "h": 1, "l": 16,  "f": 224, "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 142], [272,  3]]   }, "final": { "a": 5,   "f": 0,   "pc": 1 } },
+  { "name": "0x8E ADC A,(HL) CY=0 Z+CY",                  "initial": { "a": 128, "h": 2, "l": 32,  "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 142], [544,  128]] }, "final": { "a": 0,   "f": 144, "pc": 1 } },
+  { "name": "0x8E ADC A,(HL) CY=0 H only",                "initial": { "a": 8,   "h": 3, "l": 80,  "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 142], [848,  8]]   }, "final": { "a": 16,  "f": 32,  "pc": 1 } },
+  { "name": "0x8E ADC A,(HL) CY=0 Z+H+CY",                "initial": { "a": 255, "h": 4, "l": 192, "f": 0,   "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 142], [1216, 1]]   }, "final": { "a": 0,   "f": 176, "pc": 1 } },
+  { "name": "0x8E ADC A,(HL) CY=1 all flags reset",        "initial": { "a": 2,   "h": 5, "l": 21,  "f": 240, "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 142], [1301, 3]]   }, "final": { "a": 6,   "f": 0,   "pc": 1 } },
+  { "name": "0x8E ADC A,(HL) CY=1 H caused by carry",      "initial": { "a": 14,  "h": 6, "l": 48,  "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 142], [1584, 1]]   }, "final": { "a": 16,  "f": 32,  "pc": 1 } },
+  { "name": "0x8E ADC A,(HL) CY=1 carry prevents Z",       "initial": { "a": 240, "h": 7, "l": 255, "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 142], [2047, 16]]  }, "final": { "a": 1,   "f": 16,  "pc": 1 } },
+  { "name": "0x8E ADC A,(HL) CY=1 carry causes overflow",  "initial": { "a": 254, "h": 8, "l": 130, "f": 16,  "pc": 0, "sp": 0, "ime": 0, "hlt": 0, "ram": [[0, 142], [2178, 1]]   }, "final": { "a": 0,   "f": 176, "pc": 1 } }
+]
