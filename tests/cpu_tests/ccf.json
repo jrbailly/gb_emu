@@ -1,4 +1,4 @@
 [
-  { "name": "0x3F CCF CY=1 -> CY=0", "initial": { "pc": 0, "sp": 0, "f": 16, "ime": 0, "hlt": 0, "ram": [[0, 63]] }, "final": { "f": 0, "pc": 1 } },
-  { "name": "0x3F CCF CY=0 -> CY=1", "initial": { "pc": 0, "sp": 0, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 63]] }, "final": { "f": 16, "pc": 1 } }
+  {"name": "0x3F CCF CY=1 -> CY=0", "initial": {"pc": 0, "sp": 0, "f": 16, "ime": 0, "hlt": 0, "ram": [[0, 63]]}, "final": {"f": 0, "pc": 1}, "cycles": 4},
+  {"name": "0x3F CCF CY=0 -> CY=1", "initial": {"pc": 0, "sp": 0, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 63]]}, "final": {"f": 16, "pc": 1}, "cycles": 4}
 ]

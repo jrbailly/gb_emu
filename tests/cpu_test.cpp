@@ -52,7 +52,7 @@ class CpuInstructionTest : public ::testing::TestWithParam<std::string>
             cpu.load_registers(registers);
 
             // run
-            cpu.step();
+            uint8_t actual_cycles = cpu.step();
 
             // final state
             registers = cpu.get_registers();
@@ -71,6 +71,9 @@ class CpuInstructionTest : public ::testing::TestWithParam<std::string>
                     }
                 }
             }
+            if (test.contains("cycles"))
+                EXPECT_EQ(actual_cycles, test["cycles"].get<int>())
+                    << std::format("Test \"{}\" Cycles", name);
         }
     }
 };

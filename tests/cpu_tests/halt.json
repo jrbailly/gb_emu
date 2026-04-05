@@ -1,3 +1,3 @@
 [
-  { "name": "0x76 HALT hlt -> 1", "initial": { "pc": 0, "sp": 0, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 118]] }, "final": { "hlt": 1, "pc": 1 } }
+  {"name": "0x76 HALT hlt -> 1", "initial": {"pc": 0, "sp": 0, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 118]]}, "final": {"hlt": 1, "pc": 1}, "cycles": 4}
 ]

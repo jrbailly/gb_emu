@@ -1,3 +1,3 @@
 [
-  { "name": "0xFB EI IME -> 1", "initial": { "pc": 0, "sp": 0, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 251]] }, "final": { "ime": 1, "pc": 1 } }
+  {"name": "0xFB EI IME -> 1", "initial": {"pc": 0, "sp": 0, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 251]]}, "final": {"ime": 1, "pc": 1}, "cycles": 4}
 ]

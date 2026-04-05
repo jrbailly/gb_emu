@@ -1,10 +1,10 @@
 [
-  { "name": "0x27 DAA after ADD no correction A=0x55 valid BCD", "initial": { "pc": 0, "sp": 0, "a": 85, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 39]] }, "final": { "a": 85, "f": 0, "pc": 1 } },
-  { "name": "0x27 DAA after ADD lower nibble >9 A=0x7D -> 0x83", "initial": { "pc": 0, "sp": 0, "a": 125, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 39]] }, "final": { "a": 131, "f": 0, "pc": 1 } },
-  { "name": "0x27 DAA after ADD H flag set A=0x10 -> 0x16", "initial": { "pc": 0, "sp": 0, "a": 16, "f": 32, "ime": 0, "hlt": 0, "ram": [[0, 39]] }, "final": { "a": 22, "f": 0, "pc": 1 } },
-  { "name": "0x27 DAA after ADD A>0x99 A=0xA0 -> 0x00 CY=1 Z=1", "initial": { "pc": 0, "sp": 0, "a": 160, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 39]] }, "final": { "a": 0, "f": 144, "pc": 1 } },
-  { "name": "0x27 DAA after ADD CY already set A=0x30 -> 0x90", "initial": { "pc": 0, "sp": 0, "a": 48, "f": 16, "ime": 0, "hlt": 0, "ram": [[0, 39]] }, "final": { "a": 144, "f": 16, "pc": 1 } },
-  { "name": "0x27 DAA after ADD both corrections A=0xBB -> 0x21 CY=1", "initial": { "pc": 0, "sp": 0, "a": 187, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 39]] }, "final": { "a": 33, "f": 16, "pc": 1 } },
-  { "name": "0x27 DAA after SUB H flag set A=0x4B -> 0x45", "initial": { "pc": 0, "sp": 0, "a": 75, "f": 96, "ime": 0, "hlt": 0, "ram": [[0, 39]] }, "final": { "a": 69, "f": 64, "pc": 1 } },
-  { "name": "0x27 DAA after SUB CY set A=0x79 -> 0x19", "initial": { "pc": 0, "sp": 0, "a": 121, "f": 80, "ime": 0, "hlt": 0, "ram": [[0, 39]] }, "final": { "a": 25, "f": 80, "pc": 1 } }
+  {"name": "0x27 DAA after ADD no correction A=0x55 valid BCD", "initial": {"pc": 0, "sp": 0, "a": 85, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 39]]}, "final": {"a": 85, "f": 0, "pc": 1}, "cycles": 4},
+  {"name": "0x27 DAA after ADD lower nibble >9 A=0x7D -> 0x83", "initial": {"pc": 0, "sp": 0, "a": 125, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 39]]}, "final": {"a": 131, "f": 0, "pc": 1}, "cycles": 4},
+  {"name": "0x27 DAA after ADD H flag set A=0x10 -> 0x16", "initial": {"pc": 0, "sp": 0, "a": 16, "f": 32, "ime": 0, "hlt": 0, "ram": [[0, 39]]}, "final": {"a": 22, "f": 0, "pc": 1}, "cycles": 4},
+  {"name": "0x27 DAA after ADD A>0x99 A=0xA0 -> 0x00 CY=1 Z=1", "initial": {"pc": 0, "sp": 0, "a": 160, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 39]]}, "final": {"a": 0, "f": 144, "pc": 1}, "cycles": 4},
+  {"name": "0x27 DAA after ADD CY already set A=0x30 -> 0x90", "initial": {"pc": 0, "sp": 0, "a": 48, "f": 16, "ime": 0, "hlt": 0, "ram": [[0, 39]]}, "final": {"a": 144, "f": 16, "pc": 1}, "cycles": 4},
+  {"name": "0x27 DAA after ADD both corrections A=0xBB -> 0x21 CY=1", "initial": {"pc": 0, "sp": 0, "a": 187, "f": 0, "ime": 0, "hlt": 0, "ram": [[0, 39]]}, "final": {"a": 33, "f": 16, "pc": 1}, "cycles": 4},
+  {"name": "0x27 DAA after SUB H flag set A=0x4B -> 0x45", "initial": {"pc": 0, "sp": 0, "a": 75, "f": 96, "ime": 0, "hlt": 0, "ram": [[0, 39]]}, "final": {"a": 69, "f": 64, "pc": 1}, "cycles": 4},
+  {"name": "0x27 DAA after SUB CY set A=0x79 -> 0x19", "initial": {"pc": 0, "sp": 0, "a": 121, "f": 80, "ime": 0, "hlt": 0, "ram": [[0, 39]]}, "final": {"a": 25, "f": 80, "pc": 1}, "cycles": 4}
 ]
