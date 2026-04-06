@@ -39,7 +39,10 @@ Each SM83 instruction is covered by a unit test: registers, memory and T-cycle c
 
 ### Test ROMs
 
-- **Blargg's cpu_instrs**: validates all CPU instructions against real hardware behaviour
+- **[Blargg's test ROMs](https://github.com/crzysdrs/blarggs-test-roms)**:
+  - `cpu_instrs`: validates all CPU instructions against real hardware behaviour
+  - `instr_timing`: validates T-cycle counts for all CPU instructions
+- **[dmg-acid2](https://github.com/mattcurrie/dmg-acid2)** (mattcurrie): passes the PPU rendering accuracy test
 
 ## Project Status
 This project is currently under development.
