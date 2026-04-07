@@ -2,6 +2,7 @@
 #define _CPU_H_
 
 #include "cartridge.h"
+#include "iserializable.h"
 #include "ram.h"
 #include <array>
 #include <cstddef>
@@ -24,15 +25,15 @@ struct Registers
     };
 };
 
-class CPU
+class CPU : public ISerializable
 {
 
   public:
     CPU(RamBus &ram);
     auto debug(uint32_t cycles) -> void;
     auto step() -> uint8_t;
-    auto load_registers(const std::map<std::string, int> &registers_value) -> void;
-    auto get_registers() -> std::map<std::string, int>;
+    auto save_state(StateMap &state) -> void override;
+    auto load_state(const StateMap &state) -> void override;
 
   public:
     enum Register

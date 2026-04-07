@@ -1,5 +1,6 @@
 #ifndef _RAM_H_
 #define _RAM_H_
+#include "iserializable.h"
 #include <array>
 #include <functional>
 #include <iostream>
@@ -14,11 +15,13 @@ struct Ram
     static constexpr std::size_t ram_size = 0x10000;
 };
 
-class RamBus
+class RamBus : public ISerializable
 {
   public:
     RamBus(bool unittest = false);
     auto clear() -> void;
+    auto save_state(StateMap &state) -> void override;
+    auto load_state(const StateMap &state) -> void override;
     inline auto operator[](std::size_t i) const -> unsigned char
     {
         return _ram[i];

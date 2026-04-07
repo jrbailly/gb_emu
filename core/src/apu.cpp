@@ -29,6 +29,70 @@ APU::APU(RamBus &ram) : _ram(ram)
 }
 
 /**
+ * @brief Serializes the APU state into the provided state map.
+ *
+ * Saves the internal timing counters, the LFSR used by the noise channel,
+ * and all per-channel fields (phase, increment, volume, length timer, sweep,
+ * envelope direction, output value, and length enable flag).
+ *
+ * @param state Output map populated with the current APU state.
+ */
+auto APU::save_state(StateMap &state) -> void
+{
+    state["timer_count"] = _timer_count;
+    state["timer_cycle"] = _timer_cycle;
+    state["next_cycle"] = _next_cycle;
+    state["lfsr"] = static_cast<int>(_lfsr);
+
+    for (int channel_index = 0; channel_index < 4; ++channel_index)
+    {
+        std::string channel_prefix = std::format("ch{}_", channel_index);
+        state[channel_prefix + "phase"] = _channels[channel_index].phase;
+        state[channel_prefix + "increment"] = _channels[channel_index].increment;
+        state[channel_prefix + "length_timer"] = _channels[channel_index].length_timer;
+        state[channel_prefix + "sweep_count"] = _channels[channel_index].sweep_count;
+        state[channel_prefix + "sweep_pace"] = _channels[channel_index].sweep_pace;
+        state[channel_prefix + "direction"] = _channels[channel_index].direction;
+        state[channel_prefix + "volume"] = _channels[channel_index].volume;
+        state[channel_prefix + "value"] = static_cast<int>(_channels[channel_index].value);
+        state[channel_prefix + "length_enabled"] = static_cast<int>(_channels[channel_index].length_enabled);
+    }
+}
+
+/**
+ * @brief Restores the APU state from the provided state map.
+ *
+ * Restores internal timing counters, the LFSR, and all per-channel fields.
+ * Each key is checked for presence before restoration, making the function
+ * tolerant of partial state maps. The RAM registers (NR10–NR52, wave RAM)
+ * are restored separately by RamBus before this function is called.
+ *
+ * @param state Map containing a previously saved APU state.
+ */
+auto APU::load_state(const StateMap &state) -> void
+{
+    _timer_count = std::get<int>(state.at("timer_count"));
+    _timer_cycle = std::get<int>(state.at("timer_cycle"));
+    _next_cycle = std::get<float>(state.at("next_cycle"));
+    _lfsr = static_cast<uint16_t>(std::get<int>(state.at("lfsr")));
+
+    for (int channel_index = 0; channel_index < 4; ++channel_index)
+    {
+        std::string channel_prefix = std::format("ch{}_", channel_index);
+        Channel &channel = _channels[channel_index];
+        channel.phase = std::get<float>(state.at(channel_prefix + "phase"));
+        channel.increment = std::get<float>(state.at(channel_prefix + "increment"));
+        channel.length_timer = std::get<int>(state.at(channel_prefix + "length_timer"));
+        channel.sweep_count = std::get<int>(state.at(channel_prefix + "sweep_count"));
+        channel.sweep_pace = std::get<int>(state.at(channel_prefix + "sweep_pace"));
+        channel.direction = std::get<int>(state.at(channel_prefix + "direction"));
+        channel.volume = std::get<int>(state.at(channel_prefix + "volume"));
+        channel.value = static_cast<int16_t>(std::get<int>(state.at(channel_prefix + "value")));
+        channel.length_enabled = std::get<int>(state.at(channel_prefix + "length_enabled")) != 0;
+    }
+}
+
+/**
  * @brief Initializes the APU by registering memory callbacks for sound control registers.
  * @param ram Reference to the RamBus object for registering callbacks.
  */
@@ -84,23 +148,6 @@ auto APU::step(uint32_t cycles_count) -> void
 auto APU::flush() -> void
 {
     _buffer_index = 0;
-}
-
-/**
- * @brief Reload channels , trigger if needed
- *
- */
-auto APU::load_state() -> void
-{
-    int reg = Register::NR14;
-
-    _ram.write_register(Register::NR52, 0x80);
-    for (int i = 0; i < 4; ++i)
-    {
-        if (_ram[reg] & 0x80)
-            trigger(i);
-        reg += 0x05;
-    }
 }
 
 /**

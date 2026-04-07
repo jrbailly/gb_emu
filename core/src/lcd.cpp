@@ -51,6 +51,32 @@ LCD::~LCD()
 {
 }
 
+auto LCD::save_state(StateMap &state) -> void
+{
+    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(_framebuffer.data());
+    state["framebuffer"] = std::vector<uint8_t>(bytes, bytes + _framebuffer.size() * sizeof(uint32_t));
+    state["op_cycle"] = (int)_op_cycle;
+    state["current_mode"] = (int)_current_mode;
+}
+
+/**
+ * @brief Reload palettes and textures
+ *
+ */
+auto LCD::load_state(const StateMap &state) -> void
+{
+    _reload_sprite = true;
+    _reload_background = true;
+    update_BGP0();
+    update_OBP0();
+    update_OBP1();
+    load_texture_background();
+    load_texture_sprites();
+    _op_cycle = std::get<int>(state.at("op_cycle"));
+    _current_mode = static_cast<LCD::Mode>(std::get<int>(state.at("current_mode")));
+    _stat_interrupt = false;
+}
+
 /**
  * @brief Initialize the LCD with the given RamBus
  *
@@ -82,9 +108,10 @@ auto LCD::init(RamBus &ram) -> void
  *
  * @param cycles_count Number of cycles to advance the simulation
  */
-auto LCD::step(uint32_t cycles_count) -> void
+auto LCD::step(uint32_t cycles_count) -> bool
 {
     unsigned char ly;
+    bool frame_ready = false;
 
     if (_ram[Register::LCDC] & LCD_ENABLE)
     {
@@ -112,9 +139,10 @@ auto LCD::step(uint32_t cycles_count) -> void
                 break;
             case Mode::MODE1:
                 _next_mode = Mode::MODE1;
+                if (ly == screen_height)
+                    frame_ready = true;
                 if ((ly + 1) == max_lines)
                 {
-                    _framebuffer_ready = _framebuffer;
                     _next_mode = Mode::INIT;
                     _wnd_line = 0;
                 }
@@ -123,7 +151,7 @@ auto LCD::step(uint32_t cycles_count) -> void
                 update_interrupt();
                 _op_cycle += _current_op_cycle;
                 _current_mode = _next_mode;
-                return;
+                return frame_ready;
             default:
                 break;
             }
@@ -144,21 +172,7 @@ auto LCD::step(uint32_t cycles_count) -> void
         _reload_sprite = true;
         _reload_background = true;
     }
-}
-
-/**
- * @brief Reload palettes and textures
- *
- */
-auto LCD::load_state() -> void
-{
-    _reload_sprite = true;
-    _reload_background = true;
-    update_BGP0();
-    update_OBP0();
-    update_OBP1();
-    load_texture_background();
-    load_texture_sprites();
+    return frame_ready;
 }
 
 /**

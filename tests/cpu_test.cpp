@@ -29,9 +29,10 @@ class CpuInstructionTest : public ::testing::TestWithParam<std::string>
         CPU cpu(ram);
         std::ifstream file(jsonFile);
         nlohmann::json testData;
-        std::map<std::string, int> registers;
+        StateMap registers;
         std::string name;
 
+        registers["interrupt"] = 0;
         if (!file.is_open())
             FAIL() << "Cannot open file : " << jsonFile;
         file >> testData;
@@ -44,22 +45,22 @@ class CpuInstructionTest : public ::testing::TestWithParam<std::string>
             for (const auto &[key, value] : test["initial"].items())
             {
                 if (value.is_number())
-                    registers[key] = value;
+                    registers[key] = value.get<int>();
                 else if (key == "ram")
                     for (const auto &ram_value : value)
                         ram.write_register(ram_value[0].get<int>(), ram_value[1].get<int>());
             }
-            cpu.load_registers(registers);
+            cpu.load_state(registers);
 
             // run
             uint8_t actual_cycles = cpu.step();
 
             // final state
-            registers = cpu.get_registers();
+            cpu.save_state(registers);
             for (const auto &[key, value] : test["final"].items())
             {
                 if (value.is_number())
-                    EXPECT_EQ(registers[key], value.get<int>())
+                    EXPECT_EQ(std::get<int>(registers[key]), value.get<int>())
                         << std::format("Test \"{}\" Register \"{}\"", name, key);
                 else if (key == "ram")
                 {
@@ -72,8 +73,7 @@ class CpuInstructionTest : public ::testing::TestWithParam<std::string>
                 }
             }
             if (test.contains("cycles"))
-                EXPECT_EQ(actual_cycles, test["cycles"].get<int>())
-                    << std::format("Test \"{}\" Cycles", name);
+                EXPECT_EQ(actual_cycles, test["cycles"].get<int>()) << std::format("Test \"{}\" Cycles", name);
         }
     }
 };

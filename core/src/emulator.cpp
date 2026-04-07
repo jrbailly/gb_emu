@@ -1,8 +1,6 @@
 #include "emulator.h"
 #include <algorithm>
 #include <chrono>
-#include <fstream>
-#include <nlohmann/json.hpp>
 
 /**
  * @brief Construct a new Emulator object
@@ -36,23 +34,37 @@ auto Emulator::init() -> void
 
 /**
  * @brief Runs one frame of emulation.
+ *
+ * Steps until the LCD signals end of VBlank (LY 153→0), or until 70224 cycles
+ * have elapsed (full frame duration when the PPU is off).
  */
-auto Emulator::step_frame(uint32_t refresh_rate) -> void
+auto Emulator::step_frame() -> void
 {
+    int32_t max_frame_cycles = max_lines * cycles_per_line;
     uint32_t cycles = 0;
-    uint32_t frame_cycle_count = cpu_freq / refresh_rate;
+    bool vblank = false;
 
     _apu->flush();
-    while (_cycles_count < frame_cycle_count)
+    while (_cycles_count < max_frame_cycles && !vblank)
     {
-        //        _cpu->debug(_cycles_count);
         cycles = _cpu->step();
         _apu->step(cycles);
-        _lcd->step(cycles);
         _timer->step(_ram, cycles);
+        vblank = _lcd->step(cycles);
         _cycles_count += cycles;
     }
-    _cycles_count -= frame_cycle_count;
+    _cycles_count -= max_frame_cycles;
+}
+
+/**
+ * @brief Returns the real Game Boy refresh rate in Hz.
+ *
+ * Computed from the CPU frequency and the exact number of cycles per frame
+ * (154 lines × 456 cycles = 70224 cycles/frame), giving ≈59.7275 Hz.
+ */
+auto Emulator::get_refresh_rate() const -> float
+{
+    return static_cast<float>(cpu_freq) / static_cast<float>(max_lines * cycles_per_line);
 }
 
 auto Emulator::set_input(int pad, int button) -> void
@@ -65,39 +77,37 @@ auto Emulator::set_samplerate(float samplerate) -> void
     _apu->set_samplerate(samplerate);
 }
 
-auto Emulator::save_state() -> void
+/**
+ * @brief Saves the current emulator state into the provided state map.
+ *
+ * Each module writes its state into its corresponding entry in the map.
+ * An entry is only filled if the key is already present in the map,
+ * allowing the caller to select which modules to snapshot.
+ *
+ * @param state_map Map of module name to StateMap, populated by the caller with the desired keys.
+ */
+auto Emulator::save_state(SaveState &state_map) -> void
 {
-    nlohmann::json state;
-    std::string filename = _config._romfile + ".json";
-    std::ofstream file(filename.data());
-
-    if (!file.is_open())
-        throw std::runtime_error(std::format("cannot open file : {}", filename));
-
-    state["cpu"] = _cpu->get_registers();
-    state["ram"] = _ram.getDatas();
-    if (file)
-        file << state;
+    _ram.save_state(state_map["ram"]);
+    _cpu->save_state(state_map["cpu"]);
+    _apu->save_state(state_map["apu"]);
+    _lcd->save_state(state_map["lcd"]);
+    _timer->save_state(state_map["timer"]);
+    _controllers->save_state(state_map["controllers"]);
 }
 
-auto Emulator::load_state() -> void
+auto Emulator::load_state(SaveState &state_map) -> void
 {
-    nlohmann::json state;
-    std::string filename = _config._romfile + ".json";
-    std::ifstream file(filename.data());
-    std::map<std::string, int> registers;
-    int address = 0;
-
-    if (!file.is_open())
-        throw std::runtime_error(std::format("cannot open file : {}", filename));
-    file >> state;
-    for (auto &[key, value] : state["cpu"].items())
-        registers[key] = value;
-    _cpu->load_registers(registers);
-
-    for (auto &value : state["ram"])
-        _ram.write_register(address++, value.get<unsigned char>());
-
-    _apu->load_state();
-    _lcd->load_state();
+    if (state_map.contains("ram"))
+        _ram.load_state(state_map["ram"]);
+    if (state_map.contains("cpu"))
+        _cpu->load_state(state_map["cpu"]);
+    if (state_map.contains("apu"))
+        _apu->load_state(state_map["apu"]);
+    if (state_map.contains("lcd"))
+        _lcd->load_state(state_map["lcd"]);
+    if (state_map.contains("timer"))
+        _timer->load_state(state_map["timer"]);
+    if (state_map.contains("controllers"))
+        _controllers->load_state(state_map["controllers"]);
 }

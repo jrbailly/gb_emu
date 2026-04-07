@@ -2,6 +2,7 @@
 #define _LCD_H_
 
 #include "cpu.h"
+#include "iserializable.h"
 #include "ram.h"
 #include <array>
 #include <span>
@@ -36,7 +37,7 @@ struct OamEntry
     uint8_t value;
     uint8_t attribute;
 };
-class LCD
+class LCD : public ISerializable
 {
   public:
     enum Register
@@ -112,12 +113,9 @@ class LCD
     LCD(RamBus &ram);
     virtual ~LCD();
     auto init(RamBus &ram) -> void;
-    auto step(uint32_t cycles_count) -> void;
-    auto load_state() -> void;
-    inline auto get_frame_buffer() const -> std::span<const uint32_t>
-    {
-        return _framebuffer_ready;
-    }
+    auto step(uint32_t cycles_count) -> bool;
+    auto save_state(StateMap &state) -> void override;
+    auto load_state(const StateMap &state) -> void override;
 
   private:
     auto scanline() -> void;
@@ -153,7 +151,6 @@ class LCD
     std::array<std::array<std::array<int, tiles_height>, line_width>, 384> _texture_sprites;
     std::array<std::array<std::array<int, tiles_height>, line_width>, 384> _texture_background;
     std::array<uint32_t, (screen_width + texture_padding) * screen_height> _framebuffer;
-    std::array<uint32_t, (screen_width + texture_padding) * screen_height> _framebuffer_ready;
 };
 
 #endif

@@ -1,14 +1,16 @@
 #include "frontend_sdl.h"
 #include "controllers.h"
 #include "emulator.h"
+#include <cstring>
 #include <format>
 #include <vector>
 
 /**
  * @brief Constructs the SDL frontend, opens the audio device and initialises input bindings.
- * @param config Application configuration.
+ * @param config       Application configuration.
+ * @param refresh_rate Real Game Boy refresh rate in Hz (e.g. ≈59.7275).
  */
-FrontendSDL::FrontendSDL(const Config &config)
+FrontendSDL::FrontendSDL(const Config &config, float refresh_rate)
     : _active_filter(config._audio_filter), _audio_stream(nullptr), _dpads(0xF), _buttons(0xF), _save_requested(false),
       _load_requested(false), _scale(config._screen_scale)
 {
@@ -182,13 +184,16 @@ auto FrontendSDL::pop_load_request() -> bool
 }
 
 /**
- * @brief Waits for the given number of microseconds using SDL_DelayPrecise.
+ * @brief Sleeps until the next frame deadline, then advances it by one frame period.
  */
 auto FrontendSDL::delay() -> void
 {
-    auto wait = ((_next_frame - SDL_GetPerformanceCounter()) * 1000000000) / SDL_GetPerformanceFrequency();
+    if (_next_frame > SDL_GetPerformanceCounter())
+    {
+        auto wait = ((_next_frame - SDL_GetPerformanceCounter()) * 1000000000) / SDL_GetPerformanceFrequency();
 
-    SDL_DelayPrecise(wait);
+        SDL_DelayPrecise(wait);
+    }
     _next_frame += _increment_frame;
 }
 
@@ -200,25 +205,29 @@ auto FrontendSDL::play_audio(std::span<const int16_t> buffer) -> void
 {
     std::vector<int16_t> copy(buffer.begin(), buffer.end());
 
-    if (_active_filter)
-        for (int channel = 0; channel < channels; ++channel)
-            _filter[channel].filter(std::span<int16_t>(copy), channel, channels);
-    if (!SDL_PutAudioStreamData(_audio_stream, copy.data(), copy.size() * sizeof(int16_t)))
-        throw std::runtime_error(std::format("SDL_PutAudioStreamData : {}", SDL_GetError()));
+    if (!buffer.empty())
+    {
+        if (_active_filter)
+            for (int channel = 0; channel < channels; ++channel)
+                _filter[channel].filter(std::span<int16_t>(copy), channel, channels);
+        if (!SDL_PutAudioStreamData(_audio_stream, copy.data(), copy.size() * sizeof(int16_t)))
+            throw std::runtime_error(std::format("SDL_PutAudioStreamData : {}", SDL_GetError()));
+    }
 }
 
 /**
- * @brief Uploads the framebuffer into the SDL texture and presents it.
- * @param frame_buffer View of the LCD framebuffer (width = screen_width + texture_padding, height = screen_height).
+ * @brief Extracts the LCD framebuffer from the save state, uploads it into the SDL texture and presents it.
+ * @param state Save state produced by Emulator::save_state().
  */
-auto FrontendSDL::render(std::span<const uint32_t> frame_buffer) -> void
+auto FrontendSDL::render(const SaveState &state) -> void
 {
     void *pixels = nullptr;
     int pitch = 0;
 
+    const auto &fb_bytes = std::get<std::vector<uint8_t>>(state.at("lcd").at("framebuffer"));
     if (!SDL_LockTexture(_texture_viewer, nullptr, &pixels, &pitch))
         throw std::runtime_error(std::format("SDL_LockTexture : {}", SDL_GetError()));
-    std::copy(frame_buffer.begin(), frame_buffer.end(), static_cast<uint32_t *>(pixels));
+    std::copy(fb_bytes.begin(), fb_bytes.end(), static_cast<uint8_t *>(pixels));
     SDL_UnlockTexture(_texture_viewer);
     SDL_FRect src(texture_offset, 0, screen_width, screen_height);
     if (!SDL_SetRenderScale(_renderer, _scale, _scale))

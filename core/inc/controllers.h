@@ -1,10 +1,11 @@
 #ifndef _CONTROLLERS_H_
 #define _CONTROLLERS_H_
 
+#include "iserializable.h"
 #include "ram.h"
 #include <map>
 
-class Controllers
+class Controllers : public ISerializable
 {
   public:
     enum Register
@@ -34,6 +35,8 @@ class Controllers
     Controllers(RamBus &ram);
     auto init(RamBus &ram) -> void;
     auto set_input(int pad, int button) -> void;
+    auto save_state(StateMap &state) -> void override;
+    auto load_state(const StateMap &state) -> void override;
 
   private:
     RamBus &_ram;

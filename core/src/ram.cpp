@@ -14,6 +14,33 @@ RamBus::RamBus(bool unittest) : _unittest(unittest)
 }
 
 /**
+ * @brief Saves the full RAM buffer into the provided StateMap.
+ *
+ * Copies the entire 64KB memory array into the "ram" key as a vector of bytes.
+ *
+ * @param state StateMap to write the RAM contents into.
+ */
+auto RamBus::save_state(StateMap &state) -> void
+{
+    std::vector<uint8_t> buffer(_ram.size());
+    std::copy(_ram.begin(), _ram.end(), buffer.begin());
+    state["ram"] = std::move(buffer);
+}
+
+/**
+ * @brief Restores the full RAM buffer from the provided StateMap.
+ *
+ * Copies the bytes stored under the "ram" key back into the internal memory array.
+ *
+ * @param state StateMap containing the previously saved RAM contents.
+ */
+auto RamBus::load_state(const StateMap &state) -> void
+{
+    const auto &buffer = std::get<std::vector<uint8_t>>(state.at("ram"));
+    std::copy(buffer.begin(), buffer.end(), _ram.begin());
+}
+
+/**
  * @brief Clear memory, fill with '0'
  */
 auto RamBus::clear() -> void

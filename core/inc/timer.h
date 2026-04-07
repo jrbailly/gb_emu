@@ -2,10 +2,11 @@
 #define _TIMER_H_
 
 #include "cpu.h"
+#include "iserializable.h"
 #include "ram.h"
 
 static constexpr int cycles_per_div_increment = cpu_freq / 16384;
-class Timer
+class Timer : public ISerializable
 {
   public:
     enum Register
@@ -18,6 +19,8 @@ class Timer
     Timer();
     auto init(RamBus &ram) -> void;
     auto step(RamBus &ram, uint32_t cycles_count) -> void;
+    auto save_state(StateMap &state) -> void override;
+    auto load_state(const StateMap &state) -> void override;
 
   private:
     int32_t _next_cycle_div;

@@ -1,6 +1,7 @@
 #ifndef _APU_H_
 #define _APU_H_
 #include "cpu.h"
+#include "iserializable.h"
 #include <array>
 #include <cstdint>
 #include <span>
@@ -29,7 +30,7 @@ struct Channel
     std::function<void()> process;
 };
 
-class APU
+class APU : public ISerializable
 {
   public:
     enum Register
@@ -62,7 +63,8 @@ class APU
     auto set_samplerate(float samplerate) -> void;
     auto step(uint32_t cycles_count) -> void;
     auto flush() -> void;
-    auto load_state() -> void;
+    auto save_state(StateMap &state) -> void override;
+    auto load_state(const StateMap &state) -> void override;
     inline auto get_audio_buffer() const -> std::span<const int16_t>
     {
         return {_buffer.data(), _buffer_index};

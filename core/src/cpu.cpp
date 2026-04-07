@@ -64,6 +64,29 @@ CPU::CPU(RamBus &ram) : _ram(ram), _active_interruption(false)
     _map_reg = {Reg8::B, Reg8::C, Reg8::D, Reg8::E, Reg8::H, Reg8::L, Reg8::F, Reg8::A};
 }
 
+auto CPU::save_state(StateMap &state) -> void
+{
+    for (auto &reg : _register_index)
+        state[reg.first] = _registers.regs8[reg.second];
+    state["pc"] = _registers.pc;
+    state["sp"] = _registers.sp;
+    state["ime"] = _registers.ime;
+    state["hlt"] = _registers.halt;
+    state["interrupt"] = _active_interruption;
+}
+
+auto CPU::load_state(const StateMap &state) -> void
+{
+    for (auto &item : state)
+        if (_register_index.contains(item.first))
+            _registers.regs8[_register_index[item.first]] = std::get<int>(item.second);
+    _registers.pc = std::get<int>(state.at("pc"));
+    _registers.sp = std::get<int>(state.at("sp"));
+    _registers.ime = std::get<int>(state.at("ime"));
+    _registers.halt = std::get<int>(state.at("hlt"));
+    _active_interruption = std::get<int>(state.at("interrupt"));
+}
+
 /**
  * @brief Outputs debug information about the CPU state.
  * @param cycles Number of executed cycles.
@@ -116,38 +139,6 @@ auto CPU::step() -> uint8_t
     if (actived_interrupt == false && _registers.halt == 0)
         cycles_count = decode();
     return (cycles_count * machine_cycle);
-}
-
-/**
- * @brief Loads register values from a map.
- * @param registers_value A map containing register names and their values.
- */
-auto CPU::load_registers(const std::map<std::string, int> &registers_value) -> void
-{
-    for (auto &item : registers_value)
-        if (_register_index.find(item.first) != _register_index.end())
-            _registers.regs8[_register_index[item.first]] = item.second;
-    _registers.pc = registers_value.at("pc");
-    _registers.sp = registers_value.at("sp");
-    _registers.ime = registers_value.at("ime");
-    _registers.halt = registers_value.at("hlt");
-}
-
-/**
- * @brief Returns the current register values as a map.
- * @return A map containing register names and their values.
- */
-auto CPU::get_registers() -> std::map<std::string, int>
-{
-    std::map<std::string, int> output;
-
-    for (auto &reg : _register_index)
-        output[reg.first] = _registers.regs8[reg.second];
-    output["pc"] = _registers.pc;
-    output["sp"] = _registers.sp;
-    output["ime"] = _registers.ime;
-    output["hlt"] = _registers.halt;
-    return (output);
 }
 
 /**

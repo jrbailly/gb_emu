@@ -14,6 +14,36 @@ Timer::Timer() : _next_cycle_div(0), _next_cycle_tima(0), _cycle_tima(0)
 }
 
 /**
+ * @brief Saves the timer state into the provided StateMap.
+ *
+ * Stores the remaining cycles before the next DIV increment, the remaining
+ * cycles before the next TIMA increment, and the current TIMA clock period.
+ *
+ * @param state StateMap to write the timer state into.
+ */
+auto Timer::save_state(StateMap &state) -> void
+{
+    state["div_counter"] = (int)_next_cycle_div;
+    state["tima_counter"] = (int)_next_cycle_tima;
+    state["tima_period"] = (int)_cycle_tima;
+}
+
+/**
+ * @brief Restores the timer state from the provided StateMap.
+ *
+ * Reads back the DIV counter, TIMA counter, and TIMA clock period
+ * that were previously saved.
+ *
+ * @param state StateMap containing the previously saved timer state.
+ */
+auto Timer::load_state(const StateMap &state) -> void
+{
+    _next_cycle_div = std::get<int>(state.at("div_counter"));
+    _next_cycle_tima = std::get<int>(state.at("tima_counter"));
+    _cycle_tima = std::get<int>(state.at("tima_period"));
+}
+
+/**
  * @brief Initializes the timer with a RAM bus for register callbacks.
  *
  * @param ram Reference to the RAM bus.
