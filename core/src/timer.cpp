@@ -5,7 +5,7 @@
  * @brief Construct a new Timer object
  *
  */
-Timer::Timer() : _next_cycle_div(0), _next_cycle_tima(0), _cycle_tima(0)
+Timer::Timer() : _next_cycle_div(cycles_per_div_increment), _next_cycle_tima(0), _cycle_tima(0)
 {
     _clocks_cycles[0] = cpu_freq / 4096;
     _clocks_cycles[1] = cpu_freq / 262144;
@@ -78,7 +78,7 @@ auto Timer::step(RamBus &ram, uint32_t cycles_count) -> void
 {
     _next_cycle_div -= cycles_count;
     _next_cycle_tima -= cycles_count;
-    if (_next_cycle_div <= 0)
+    while (_next_cycle_div <= 0)
     {
         unsigned char div = ram[Register::DIV] + 1;
 
