@@ -33,9 +33,7 @@ To compile this project, ensure you have the following tools and libraries insta
 
 ## Tests
 
-### CPU unit tests
-
-Each SM83 instruction is covered by a unit test: registers, memory and T-cycle count are verified against a reference state, including both taken and not-taken paths for conditional instructions.
+Unit tests are implemented for the following modules: CPU, cartridge, controllers, timer.
 
 ### Test ROMs
 
