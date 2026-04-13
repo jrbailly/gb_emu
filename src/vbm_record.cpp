@@ -13,7 +13,7 @@
  * @param filename Path to the VBM record file.
  * @throws std::runtime_error if the file cannot be opened.
  */
-auto VbmRecord::parse_file(const std::string &filename) -> void
+auto VbmRecord::parse_file(std::string_view filename) -> void
 {
     constexpr size_t header_size = 0x100;
     uint16_t frame = 0;

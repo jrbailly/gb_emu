@@ -19,7 +19,7 @@ class VbmRecord : public IRecord
      * @param filename Path to the VBM record file.
      * @throws std::runtime_error if the file cannot be opened.
      */
-    auto parse_file(const std::string &filename) -> void override;
+    auto parse_file(std::string_view filename) -> void override;
 };
 
 #endif

@@ -243,3 +243,19 @@ TEST_F(ControllersTest, NoInterrupt_When_Inputs_Unchanged)
     EXPECT_EQ(ram[Controllers::Register::JOYP],
               expected_joyp(Controllers::ESelect::BUTTON, Controllers::DButtonMask::A));
 }
+
+/**
+ * @brief Verifies that releasing a button does not trigger the JOYPAD interrupt.
+ * @details The interrupt must only fire on a falling edge (button newly pressed).
+ *          A first call presses A, setting IF. After clearing IF, a second call
+ *          releases A (no new press). IF must remain clear.
+ */
+TEST_F(ControllersTest, NoInterrupt_When_Button_Released)
+{
+    controllers.set_input(0xF, 0xF ^ Controllers::DButtonMask::A); // press A → interrupt fires
+    ram.write_register(CPU::Register::IF, 0x00);                    // clear interrupt flag
+
+    controllers.set_input(0xF, 0xF); // release A → no new press, no interrupt
+
+    EXPECT_EQ(ram[CPU::Register::IF] & CPU::IFFlag::JOYPAD, 0);
+}

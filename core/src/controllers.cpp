@@ -75,7 +75,9 @@ auto Controllers::init(RamBus &ram) -> void
  */
 auto Controllers::set_input(int pad, int button) -> void
 {
-    if (_dpads != pad || _buttons != button)
+    // Trigger JOYPAD interrupt only on falling edge (bit 1→0 = button newly pressed)
+    int newly_pressed = (_dpads & ~pad) | (_buttons & ~button);
+    if (newly_pressed & 0x0F)
         _ram.write_register(CPU::Register::IF, _ram[CPU::Register::IF] | CPU::IFFlag::JOYPAD);
     _dpads = pad;
     _buttons = button;

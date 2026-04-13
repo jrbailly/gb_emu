@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 /**
@@ -21,7 +22,7 @@ class IRecord
      * @brief Parse a record file and populate the input vectors.
      * @param filename Path to the record file.
      */
-    virtual auto parse_file(const std::string &filename) -> void = 0;
+    virtual auto parse_file(std::string_view filename) -> void = 0;
 
     /**
      * @brief Return the inputs for the current frame and advance to the next one.

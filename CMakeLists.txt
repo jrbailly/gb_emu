@@ -5,11 +5,13 @@ set (CMAKE_COLOR_MAKEFILE ON)
 
 find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared PATHS "D:\\workspace\\SDL3-3.4.2")
 find_package(GTest REQUIRED)
+find_package(PkgConfig REQUIRED)
+find_package(libzip REQUIRED)
 
 file(GLOB_RECURSE SRCS src/*.cpp core/src/*.cpp frontend/src/*.cpp)
 include_directories ("inc" "core/inc" "frontend/inc")
 add_executable(gb_emu ${SRCS})
-target_link_libraries(gb_emu PRIVATE SDL3::SDL3)
+target_link_libraries(gb_emu PRIVATE SDL3::SDL3 libzip::zip)
 target_compile_options(gb_emu PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 

@@ -1,4 +1,5 @@
 #include "application.h"
+#include "bizhawk_record.h"
 #include "frontend_sdl.h"
 #include "vbm_record.h"
 #include <SDL3/SDL.h>
@@ -32,7 +33,10 @@ auto Application::init(const Config &configuration) -> void
     _emulator->set_samplerate(_frontend->get_samplerate());
     if (!configuration._recordfile.empty())
     {
-        _record = std::make_unique<VbmRecord>();
+        if (configuration._recordfile.ends_with(".bk2"))
+            _record = std::make_unique<BizHawkRecord>();
+        else
+            _record = std::make_unique<VbmRecord>();
         _record->parse_file(configuration._recordfile);
     }
 }

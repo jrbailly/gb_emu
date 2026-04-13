@@ -19,7 +19,7 @@ auto parse_command_line(int argc, char **argv, Config &config) -> bool
     options.add_options()("f,filename", "ROM file", cxxopts::value<std::string>())(
         "s,screen_scale", "Screen size", cxxopts::value<int>()->default_value("3"))(
         "a,audio_filter", "Sound High Pass Filter", cxxopts::value<int>()->default_value("1"))(
-        "r,record_file", "Inputs record file", cxxopts::value<std::string>())("h,help", "Help")("v,version",
+        "r,record_file", "Inputs record file (VBM or BizHawk BK2 format)", cxxopts::value<std::string>())("h,help", "Help")("v,version",
                                                                                                 "Show version");
 
     auto result = options.parse(argc, argv);
