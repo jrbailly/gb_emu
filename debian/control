@@ -8,8 +8,8 @@ Build-Depends:
  cmake,
  libsdl3-dev,
  nlohmann-json3-dev,
- googletest,
  libgtest-dev,
+ libzip-dev,
  g++ | clang,
 Standards-Version: 4.7.2
 
