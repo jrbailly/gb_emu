@@ -6,7 +6,7 @@
 #include "irecord.h"
 #include <array>
 
-static constexpr std::string_view app_version = "0.1.0";
+static constexpr std::string_view app_version = "0.2.0";
 static constexpr std::size_t save_state_buffer_size = 64;
 
 class Application

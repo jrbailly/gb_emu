@@ -1,3 +1,37 @@
+## [0.2.0] - 2026-04-13
+- ARCH: Frontend and core split into separate source trees
+- ARCH: Frame pacing moved to frontend
+- ARCH: Application split into init and main loop phases
+- ARCH: Emulator refresh rate computed from hardware constants
+- APU: Sample rate sourced from the audio device at startup
+- APU: Fixed channel 3 shutdown
+- APU: Fixed channel length timer initialization on trigger
+- APU: Fixed PCM channel sample index out-of-bounds
+- BUILD: GTest integration enabled
+- BUILD: libzip dependency added
+- BUILD: Build reorganized with separate core and frontend compilation units
+- CARTRIDGE: ROM header validation on load
+- CARTRIDGE: Reworked MBC1 bank number masking
+- CONTROLLER: Reworked JOYP register select bits handling
+- CONTROLLER: VBM format input replay
+- CONTROLLER: BizHawk BK2 format input replay
+- CPU: Fixed PUSH instruction byte order
+- CPU: Fixed RETI active interrupt flag
+- EMU: Frame step driven by VBlank signal from LCD
+- EMU: Save and load state for all hardware modules
+- EMU: JSON save state persistence on disk
+- EMU: Circular in-memory save state buffer
+- LCD: SDL rendering removed from core, pixels written to a frame buffer
+- LCD: 4-cycle interrupt delay between mode transitions
+- LCD: Dedicated init mode for the first scanline after reset
+- LCD: Fixed OAM sprite coordinate offsets
+- MAIN: Version flag added
+- TESTS: CPU instruction tests for all SM83 opcodes
+- TESTS: CPU instruction timing tests
+- TESTS: Timer unit tests
+- TESTS: Controllers unit tests
+- TESTS: Cartridge unit tests
+
 ## [0.1.0] - 2025-09-09
 - Integrated CMake for the build system
 - Integrated GoogleTest for unit testing

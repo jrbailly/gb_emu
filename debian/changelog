@@ -1,3 +1,13 @@
+gbemu (0.2-1) UNRELEASED; urgency=medium
+
+  * Frontend and core decoupled into separate source trees
+  * Save and load state for all hardware modules with JSON persistence
+  * VBM and BizHawk BK2 input replay support
+  * Multiple LCD and APU accuracy fixes
+  * Unit tests for CPU, Timer, Controllers and Cartridge
+
+ -- Jerome Bailly <john.doe@null.org>  Sun, 13 Apr 2026 07:58:38 +0200
+
 gbemu (0.1-1) UNRELEASED; urgency=medium
 
   * Initial release.

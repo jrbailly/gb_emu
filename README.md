@@ -20,6 +20,7 @@ To compile this project, ensure you have the following tools and libraries insta
 - gcc or clang
 - SDL3
 - nlohmann_json
+- zip
 - Google Test
 - CMake
 
