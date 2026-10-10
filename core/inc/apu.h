@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <span>
 
+static constexpr int default_samplerate = 44100;
 static constexpr float apu_freq = cpu_freq / 4.0;
 static constexpr int timer_period = cpu_freq / 256;
 static constexpr int sweep_div = 2;
@@ -65,7 +66,7 @@ class APU : public ISerializable
     auto flush() -> void;
     auto save_state(StateMap &state) -> void override;
     auto load_state(const StateMap &state) -> void override;
-    inline auto get_audio_buffer() const -> std::span<const int16_t>
+    [[nodiscard]] inline auto get_audio_buffer() const -> std::span<const int16_t>
     {
         return {_buffer.data(), _buffer_index};
     }

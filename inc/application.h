@@ -4,9 +4,11 @@
 #include "emulator.h"
 #include "ifrontend.h"
 #include "irecord.h"
+#include "version.h"
 #include <array>
+#include <atomic>
+#include <thread>
 
-static constexpr std::string_view app_version = "0.2.0";
 static constexpr std::size_t save_state_buffer_size = 64;
 
 class Application
@@ -15,6 +17,7 @@ class Application
     Application();
     auto init(const Config &configuration) -> void;
     auto main_loop() -> void;
+    auto process_events() -> void;
 
   private:
     auto save_state_json() -> void;
@@ -26,6 +29,7 @@ class Application
     std::array<SaveState, save_state_buffer_size> _save_states;
     std::size_t _save_state_index = 0;
     Config _config;
-    bool _quit = false;
+    std::atomic<bool> _quit{false};
+    std::jthread _emulator_thread;
 };
 #endif

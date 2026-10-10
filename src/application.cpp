@@ -1,12 +1,18 @@
 #include "application.h"
 #include "bizhawk_record.h"
-#include "frontend_sdl.h"
 #include "vbm_record.h"
-#include <SDL3/SDL.h>
 #include <format>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
+#include <string>
+
+#ifdef FRONTEND_QT
+#include "frontend_qt.h"
+#else
+#include "frontend_sdl.h"
+#include <SDL3/SDL.h>
+#endif
 
 /**
  * @brief Constructs an Application object with default state.
@@ -19,6 +25,8 @@ Application::Application()
  * @brief Initializes the application with the given configuration.
  *
  * Creates the frontend, emulator, and optionally the input record replay system.
+ * The initial ROM is loaded before the emulator thread is started, so that any
+ * ROM validation error surfaces on the calling thread.
  * Also sets the audio sample rate from the frontend.
  *
  * @param configuration Configuration holding the ROM file path, screen scale,
@@ -27,52 +35,83 @@ Application::Application()
 auto Application::init(const Config &configuration) -> void
 {
     _config = configuration;
-    _emulator = std::make_unique<Emulator>(configuration);
+    _emulator = std::make_unique<Emulator>();
     _emulator->init();
-    _frontend = std::make_unique<FrontendSDL>(configuration, _emulator->get_refresh_rate());
+    _emulator->load_rom(_config._romfile);
+#ifdef FRONTEND_QT
+    _frontend = std::make_unique<FrontendQt>(_config, _emulator->get_refresh_rate());
+#else
+    _frontend = std::make_unique<FrontendSDL>(_config, _emulator->get_refresh_rate());
+#endif
     _emulator->set_samplerate(_frontend->get_samplerate());
-    if (!configuration._recordfile.empty())
+    if (!_config._recordfile.empty())
     {
-        if (configuration._recordfile.ends_with(".bk2"))
+        if (_config._recordfile.ends_with(".bk2"))
             _record = std::make_unique<BizHawkRecord>();
         else
             _record = std::make_unique<VbmRecord>();
-        _record->parse_file(configuration._recordfile);
+        _record->parse_file(_config._recordfile);
     }
+    _emulator_thread = std::jthread(&Application::main_loop, this);
 }
 
 /**
  * @brief Runs the main emulation loop until the user quits.
  *
- * Each iteration polls inputs, handles save/load requests, steps the emulator
- * by one frame, snapshots the emulator state into the circular save state buffer,
- * and submits audio and video output to the frontend.
+ * Each iteration polls inputs, handles the frontend requests (save state, load state,
+ * ROM load), steps the emulator by one frame, snapshots the emulator state into the
+ * circular save state buffer, and submits audio and video output to the frontend.
  */
 auto Application::main_loop() -> void
 {
     uint8_t pad = 0;
     uint8_t button = 0;
+    std::string romfile;
 
+    _frontend->init();
     while (!_quit)
     {
-        _quit = _frontend->get_input(pad, button);
+        // Process inputs
+        _frontend->get_input(pad, button);
         if (_record)
             _record->get_input(pad, button);
+        _emulator->set_input(pad, button);
+
+        // Process requests
         if (_frontend->pop_save_request())
             save_state_json();
         if (_frontend->pop_load_request())
             load_state_json();
-        if (!_quit)
+        if (_frontend->pop_rom_request(romfile))
         {
-            _emulator->set_input(pad, button);
-            _emulator->step_frame();
-            _emulator->save_state(_save_states[_save_state_index]);
-            _frontend->play_audio(_emulator->get_audio_buffer());
-            _frontend->render(_save_states[_save_state_index]);
-            _save_state_index = (_save_state_index + 1) % save_state_buffer_size;
-            _frontend->delay();
+            _emulator->load_rom(romfile);
+            _config._romfile = romfile;
         }
+
+        // Frame simulation
+        _emulator->step_frame();
+
+        // Rendering
+        _emulator->save_state(_save_states[_save_state_index]);
+        _frontend->play_audio(_emulator->get_audio_buffer());
+        _frontend->render(_emulator->get_graphic_buffer());
+        _save_state_index = (_save_state_index + 1) % save_state_buffer_size;
+
+        _frontend->delay();
     }
+}
+
+/**
+ * @brief Blocks on the frontend event loop until quit, then stops the emulator thread.
+ *
+ * Runs the frontend's blocking event loop on the calling thread. Once it returns
+ * (quit requested), the emulator thread started by @ref init is signalled to stop
+ * and joined.
+ */
+auto Application::process_events() -> void
+{
+    _frontend->process_events();
+    _quit = true;
 }
 
 /**

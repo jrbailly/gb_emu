@@ -8,7 +8,7 @@
  */
 APU::APU(RamBus &ram) : _ram(ram)
 {
-    _samplerate = 0;
+    _samplerate = default_samplerate;
     _sample_period = 0;
     _next_cycle = 0;
     _timer_cycle = timer_period;
@@ -156,7 +156,8 @@ auto APU::flush() -> void
  */
 auto APU::set_samplerate(float samplerate) -> void
 {
-    _samplerate = samplerate;
+    if (samplerate > 0)
+        _samplerate = samplerate;
     _sample_period = cpu_freq / _samplerate;
     _next_cycle = _sample_period;
 }

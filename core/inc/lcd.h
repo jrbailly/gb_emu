@@ -29,6 +29,7 @@ static constexpr int cycles_per_line = 456;
 static constexpr int max_lines = 154;
 static constexpr int texture_padding = 2 * tiles_width;
 static constexpr int texture_offset = tiles_width;
+static constexpr int graphic_buffer_size = screen_width * screen_height * sizeof(uint32_t);
 
 struct OamEntry
 {
@@ -111,11 +112,12 @@ class LCD : public ISerializable
         WHITE,
     };
     LCD(RamBus &ram);
-    virtual ~LCD();
     auto init(RamBus &ram) -> void;
     auto step(uint32_t cycles_count) -> bool;
     auto save_state(StateMap &state) -> void override;
     auto load_state(const StateMap &state) -> void override;
+    [[nodiscard]]
+    auto get_graphic_buffer() -> std::span<const uint8_t>;
 
   private:
     auto scanline() -> void;
@@ -151,6 +153,7 @@ class LCD : public ISerializable
     std::array<std::array<std::array<int, tiles_height>, line_width>, 384> _texture_sprites;
     std::array<std::array<std::array<int, tiles_height>, line_width>, 384> _texture_background;
     std::array<uint32_t, (screen_width + texture_padding) * screen_height> _framebuffer;
+    std::array<uint8_t, graphic_buffer_size> _graphic_buffer;
 };
 
 #endif

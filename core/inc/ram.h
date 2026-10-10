@@ -42,10 +42,6 @@ class RamBus : public ISerializable
     auto write_range(unsigned int start_address, unsigned int dst_address, size_t size) -> void;
     auto register_callback(int address, ram_callback fnc) -> void;
     auto register_callback_range(int start_address, size_t size, ram_callback fnc) -> void;
-    const std::array<unsigned char, Ram::ram_size> getDatas() const
-    {
-        return _ram;
-    }
 
   private:
     bool _unittest;

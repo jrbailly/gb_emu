@@ -47,6 +47,20 @@ constexpr std::array<uint16_t, 2048> intToBcd = [] {
  */
 CPU::CPU(RamBus &ram) : _ram(ram), _active_interruption(false)
 {
+    _register_index = {{"b", Reg8::B}, {"c", Reg8::C}, {"d", Reg8::D}, {"e", Reg8::E},
+                       {"h", Reg8::H}, {"l", Reg8::L}, {"f", Reg8::F}, {"a", Reg8::A}};
+    _map_reg = {Reg8::B, Reg8::C, Reg8::D, Reg8::E, Reg8::H, Reg8::L, Reg8::F, Reg8::A};
+    reset();
+}
+
+/**
+ * @brief Restores the CPU to its post-boot state.
+ *
+ * Sets the power-up values of the SM83 registers and clears the interrupt and
+ * HALT state, so execution restarts at the ROM entry point (0x0100).
+ */
+auto CPU::reset() -> void
+{
     _registers.halt = 0;
     _registers.ime = 0;
     _registers.pc = 0x100;
@@ -59,11 +73,15 @@ CPU::CPU(RamBus &ram) : _ram(ram), _active_interruption(false)
     _registers.regs8[Reg8::E] = 0xd8;
     _registers.regs8[Reg8::H] = 0x01;
     _registers.regs8[Reg8::L] = 0x4d;
-    _register_index = {{"b", Reg8::B}, {"c", Reg8::C}, {"d", Reg8::D}, {"e", Reg8::E},
-                       {"h", Reg8::H}, {"l", Reg8::L}, {"f", Reg8::F}, {"a", Reg8::A}};
-    _map_reg = {Reg8::B, Reg8::C, Reg8::D, Reg8::E, Reg8::H, Reg8::L, Reg8::F, Reg8::A};
+    _active_interruption = false;
 }
 
+/**
+ * @brief Serializes the CPU registers into the given state map.
+ *
+ * @param state Map receiving the register values: the eight 8-bit registers by
+ *              name, plus pc, sp, ime, hlt and interrupt.
+ */
 auto CPU::save_state(StateMap &state) -> void
 {
     for (auto &reg : _register_index)
@@ -75,6 +93,11 @@ auto CPU::save_state(StateMap &state) -> void
     state["interrupt"] = _active_interruption;
 }
 
+/**
+ * @brief Restores the CPU registers from the given state map.
+ *
+ * @param state Map holding the register values, as produced by @ref save_state.
+ */
 auto CPU::load_state(const StateMap &state) -> void
 {
     for (auto &item : state)

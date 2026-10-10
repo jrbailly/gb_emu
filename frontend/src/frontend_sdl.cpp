@@ -14,13 +14,20 @@ FrontendSDL::FrontendSDL(const Config &config, float refresh_rate)
     : _active_filter(config._audio_filter), _audio_stream(nullptr), _dpads(0xF), _buttons(0xF), _save_requested(false),
       _load_requested(false), _scale(config._screen_scale)
 {
+    _increment_frame = SDL_GetPerformanceFrequency() / refresh_rate;
+    _next_frame = SDL_GetPerformanceCounter() + _increment_frame;
+}
+
+/**
+ * @brief Initialize SDL , opens the audio device and initialises input bindings.
+ */
+auto FrontendSDL::init() -> void
+{
     if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS))
         throw std::runtime_error(std::format("SDL_Init : {}", SDL_GetError()));
     init_audio();
     init_graphics();
     init_controllers();
-    _increment_frame = SDL_GetPerformanceFrequency() / refresh_rate;
-    _next_frame = SDL_GetPerformanceCounter() + _increment_frame;
 }
 
 /**
@@ -51,8 +58,8 @@ auto FrontendSDL::init_graphics() -> void
     _renderer = SDL_CreateRenderer(_window, NULL);
     if (!_renderer)
         throw std::runtime_error(std::format("SDL_CreateRenderer : {}", SDL_GetError()));
-    _texture_viewer = SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING,
-                                        screen_width + texture_padding, screen_height);
+    _texture_viewer = SDL_CreateTexture(_renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, screen_width,
+                                        screen_height);
     if (!_texture_viewer)
         throw std::runtime_error(std::format("SDL_CreateTexture : {}", SDL_GetError()));
     if (!SDL_SetRenderDrawColor(_renderer, 255, 255, 255, 255))
@@ -104,61 +111,88 @@ FrontendSDL::~FrontendSDL()
 }
 
 /**
- * @brief Polls SDL events, updates the input state and returns whether a quit was requested.
+ * @brief Returns the current input state.
  *
- * Key and gamepad button events update the internal d-pad and button bitmasks.
- * F1 and F2 set the save/load request flags consumed by @ref pop_save_request
- * and @ref pop_load_request.
+ * Event decoding is performed by @ref process_events through @ref event_filter;
+ * this method only exposes the resulting pad/button bitmasks to the application.
  *
  * @param pad    Output: current d-pad bitmask.
  * @param button Output: current button bitmask.
+ */
+auto FrontendSDL::get_input(uint8_t &pad, uint8_t &button) -> void
+{
+    pad = _dpads;
+    button = _buttons;
+}
+
+/**
+ * @brief Decodes a single SDL event, updating the input state and request flags.
+ *
+ * Key and gamepad button events update the internal d-pad and button bitmasks,
+ * while other events may raise the save or load request flags consumed by
+ * @ref pop_save_request and @ref pop_load_request. A quit event ends the
+ * blocking event loop in @ref process_events.
+ *
+ * @param event Event to decode.
  * @return true if a quit event was received.
  */
-auto FrontendSDL::get_input(uint8_t &pad, uint8_t &button) -> bool
+auto FrontendSDL::event_filter(const SDL_Event &event) -> bool
+{
+    switch (event.type)
+    {
+    case SDL_EVENT_QUIT:
+        return true;
+    case SDL_EVENT_KEY_DOWN:
+        if (event.key.key == SDLK_F1)
+            _save_requested = true;
+        if (event.key.key == SDLK_F2)
+            _load_requested = true;
+        if (_dpads_binding_keys.count(event.key.key))
+            _dpads &= ~_dpads_binding_keys[event.key.key];
+        if (_buttons_binding_keys.count(event.key.key))
+            _buttons &= ~_buttons_binding_keys[event.key.key];
+        break;
+    case SDL_EVENT_KEY_UP:
+        if (_dpads_binding_keys.count(event.key.key))
+            _dpads |= _dpads_binding_keys[event.key.key];
+        if (_buttons_binding_keys.count(event.key.key))
+            _buttons |= _buttons_binding_keys[event.key.key];
+        break;
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+        if (_dpads_binding_gamepad.count(event.gbutton.button))
+            _dpads &= ~_dpads_binding_gamepad[event.gbutton.button];
+        if (_buttons_binding_gamepad.count(event.gbutton.button))
+            _buttons &= ~_buttons_binding_gamepad[event.gbutton.button];
+        break;
+    case SDL_EVENT_GAMEPAD_BUTTON_UP:
+        if (_dpads_binding_gamepad.count(event.gbutton.button))
+            _dpads |= static_cast<uint8_t>(_dpads_binding_gamepad[event.gbutton.button]);
+        if (_buttons_binding_gamepad.count(event.gbutton.button))
+            _buttons |= static_cast<uint8_t>(_buttons_binding_gamepad[event.gbutton.button]);
+        break;
+    default:
+        break;
+    }
+    return false;
+}
+
+/**
+ * @brief Runs the blocking SDL event loop until a quit event is received.
+ *
+ * Waits for each event and feeds it to @ref event_filter, returning once a quit
+ * event has been handled. SDL_WaitEvent sleeps while the queue is empty, so this
+ * does not spin the CPU.
+ */
+auto FrontendSDL::process_events() -> void
 {
     SDL_Event event;
 
-    while (SDL_PollEvent(&event) != 0)
+    while (true)
     {
-        switch (event.type)
-        {
-        case SDL_EVENT_QUIT:
-            return true;
-        case SDL_EVENT_KEY_DOWN:
-            if (event.key.key == SDLK_F1)
-                _save_requested = true;
-            if (event.key.key == SDLK_F2)
-                _load_requested = true;
-            if (_dpads_binding_keys.count(event.key.key))
-                _dpads &= ~_dpads_binding_keys[event.key.key];
-            if (_buttons_binding_keys.count(event.key.key))
-                _buttons &= ~_buttons_binding_keys[event.key.key];
-            break;
-        case SDL_EVENT_KEY_UP:
-            if (_dpads_binding_keys.count(event.key.key))
-                _dpads |= _dpads_binding_keys[event.key.key];
-            if (_buttons_binding_keys.count(event.key.key))
-                _buttons |= _buttons_binding_keys[event.key.key];
-            break;
-        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-            if (_dpads_binding_gamepad.count(event.gbutton.button))
-                _dpads &= ~_dpads_binding_gamepad[event.gbutton.button];
-            if (_buttons_binding_gamepad.count(event.gbutton.button))
-                _buttons &= ~_buttons_binding_gamepad[event.gbutton.button];
-            break;
-        case SDL_EVENT_GAMEPAD_BUTTON_UP:
-            if (_dpads_binding_gamepad.count(event.gbutton.button))
-                _dpads |= static_cast<uint8_t>(_dpads_binding_gamepad[event.gbutton.button]);
-            if (_buttons_binding_gamepad.count(event.gbutton.button))
-                _buttons |= static_cast<uint8_t>(_buttons_binding_gamepad[event.gbutton.button]);
-            break;
-        default:
-            break;
-        }
+        SDL_WaitEvent(&event);
+        if (event_filter(event))
+            return;
     }
-    pad = _dpads;
-    button = _buttons;
-    return false;
 }
 
 /**
@@ -181,6 +215,20 @@ auto FrontendSDL::pop_load_request() -> bool
     bool requested = _load_requested;
     _load_requested = false;
     return requested;
+}
+
+/**
+ * @brief Consume and return the pending ROM load request.
+ *
+ * The SDL frontend offers no ROM selection interface, so no request can ever be
+ * raised: this always reports that nothing is pending.
+ *
+ * @param filename Output: left untouched.
+ * @return false, always.
+ */
+auto FrontendSDL::pop_rom_request(std::string & /*filename*/) -> bool
+{
+    return false;
 }
 
 /**
@@ -216,20 +264,19 @@ auto FrontendSDL::play_audio(std::span<const int16_t> buffer) -> void
 }
 
 /**
- * @brief Extracts the LCD framebuffer from the save state, uploads it into the SDL texture and presents it.
- * @param state Save state produced by Emulator::save_state().
+ * @brief Uploads the de-padded LCD frame into the SDL texture and presents it.
+ * @param buffer RGBA8888 frame produced by Emulator::get_graphic_buffer().
  */
-auto FrontendSDL::render(const SaveState &state) -> void
+auto FrontendSDL::render(std::span<const uint8_t> buffer) -> void
 {
     void *pixels = nullptr;
     int pitch = 0;
 
-    const auto &fb_bytes = std::get<std::vector<uint8_t>>(state.at("lcd").at("framebuffer"));
     if (!SDL_LockTexture(_texture_viewer, nullptr, &pixels, &pitch))
         throw std::runtime_error(std::format("SDL_LockTexture : {}", SDL_GetError()));
-    std::copy(fb_bytes.begin(), fb_bytes.end(), static_cast<uint8_t *>(pixels));
+    std::copy(buffer.begin(), buffer.end(), static_cast<uint8_t *>(pixels));
     SDL_UnlockTexture(_texture_viewer);
-    SDL_FRect src(texture_offset, 0, screen_width, screen_height);
+    SDL_FRect src(0, 0, screen_width, screen_height);
     if (!SDL_SetRenderScale(_renderer, _scale, _scale))
         throw std::runtime_error(std::format("SDL_SetRenderScale : {}", SDL_GetError()));
     if (!SDL_RenderTexture(_renderer, _texture_viewer, &src, NULL))

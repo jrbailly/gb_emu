@@ -7,29 +7,44 @@
  *
  * @param configuration Configuration
  */
-Emulator::Emulator(const Config &configuration)
+Emulator::Emulator()
     : _ram(), _apu(std::make_unique<APU>(_ram)), _cartridge(std::make_unique<Cartridge>()),
       _controllers(std::make_unique<Controllers>(_ram)), _cpu(std::make_unique<CPU>(_ram)),
-      _lcd(std::make_unique<LCD>(_ram)), _timer(std::make_unique<Timer>()), _config(configuration), _cycles_count(0)
+      _lcd(std::make_unique<LCD>(_ram)), _timer(std::make_unique<Timer>()), _cycles_count(0)
 {
 }
 
 /**
  * @brief Init emulator.
- * - Load rom
  * - Register write callback in peripherals.
- * - Load last saved memory
+ * - Reset the CPU
  *
  */
 auto Emulator::init() -> void
 {
-    _cartridge->read_rom(_config._romfile);
-    _cartridge->load_rom(_ram);
     _cartridge->init(_ram);
     _apu->init(_ram);
     _controllers->init(_ram);
     _lcd->init(_ram);
     _timer->init(_ram);
+    _cpu->reset();
+}
+
+/**
+ * @brief Loads a ROM image into the cartridge and restarts the CPU.
+ *
+ * The cartridge write callbacks must already be registered by @ref init.
+ *
+ * @param romfile Path to the .gb ROM file.
+ */
+auto Emulator::load_rom(const std::string_view romfile) -> void
+{
+    if (!romfile.empty())
+    {
+        _cartridge->read_rom(romfile);
+        _cartridge->load_rom(_ram);
+        _cpu->reset();
+    }
 }
 
 /**

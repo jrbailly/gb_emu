@@ -30,6 +30,7 @@ class CPU : public ISerializable
 
   public:
     CPU(RamBus &ram);
+    auto reset() -> void;
     auto debug(uint32_t cycles) -> void;
     auto step() -> uint8_t;
     auto save_state(StateMap &state) -> void override;

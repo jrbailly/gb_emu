@@ -30,3 +30,26 @@
 *.exe
 *.out
 *.app
+
+# Build directories and CMake leftovers
+build/
+build.win32/
+CMakeCache.txt
+CMakeFiles/
+
+# IDE
+.vscode/
+.qtcreator/
+
+# ROMs — copyrighted, never committed
+roms/
+
+# debhelper build output
+debian/.debhelper/
+debian/*.substvars
+debian/files
+
+# Design docs — kept out of the repository
+ARCHITECTURE.md
+CLAUDE.md
+CODING_RULES.md

@@ -20,17 +20,25 @@ using SaveState = std::map<std::string, StateMap>;
 class Emulator
 {
   public:
-    Emulator(const Config &Configuration);
+    Emulator();
     auto init() -> void;
+    auto load_rom(const std::string_view romfile) -> void;
     auto step_frame() -> void;
+    [[nodiscard]]
     auto get_refresh_rate() const -> float;
     auto set_input(int pad, int button) -> void;
     auto set_samplerate(float samplerate) -> void;
     auto save_state(SaveState &state_map) -> void;
     auto load_state(SaveState &state_map) -> void;
+    [[nodiscard]]
     inline auto get_audio_buffer() const -> std::span<const int16_t>
     {
         return _apu->get_audio_buffer();
+    }
+    [[nodiscard]]
+    inline auto get_graphic_buffer() -> std::span<const uint8_t>
+    {
+        return _lcd->get_graphic_buffer();
     }
 
   private:
@@ -41,7 +49,6 @@ class Emulator
     std::unique_ptr<CPU> _cpu;
     std::unique_ptr<LCD> _lcd;
     std::unique_ptr<Timer> _timer;
-    const Config _config;
     int32_t _cycles_count;
 };
 

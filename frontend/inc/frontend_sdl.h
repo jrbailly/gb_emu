@@ -16,12 +16,15 @@ class FrontendSDL : public IFrontend
   public:
     FrontendSDL(const Config &config, float refresh_rate);
     ~FrontendSDL();
-    auto get_input(uint8_t &pad, uint8_t &button) -> bool override;
+    auto init() -> void override;
+    auto get_input(uint8_t &pad, uint8_t &button) -> void override;
+    auto process_events() -> void override;
     auto pop_save_request() -> bool override;
     auto pop_load_request() -> bool override;
+    auto pop_rom_request(std::string &filename) -> bool override;
     auto delay() -> void override;
     auto play_audio(std::span<const int16_t> buffer) -> void override;
-    auto render(const SaveState &state) -> void override;
+    auto render(std::span<const uint8_t> buffer) -> void override;
     auto get_samplerate() -> uint32_t override
     {
         return samplerate;
@@ -31,6 +34,7 @@ class FrontendSDL : public IFrontend
     auto init_audio() -> void;
     auto init_graphics() -> void;
     auto init_controllers() -> void;
+    auto event_filter(const SDL_Event &event) -> bool;
 
   private:
     bool _active_filter;

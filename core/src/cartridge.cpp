@@ -45,6 +45,7 @@ auto Cartridge::read_rom(const std::string_view filename) -> void
 
     if (!input)
         throw std::runtime_error(std::format("Failed to open ROM file: {}", filename));
+    _rom.clear();
     do
     {
         std::array<unsigned char, block_size> block;

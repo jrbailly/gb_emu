@@ -35,7 +35,7 @@ auto parse_command_line(int argc, char **argv, Config &config) -> bool
         std::cout << app_version << std::endl;
         return false;
     }
-    if (result.count("help") || config._romfile.empty())
+    if (result.count("help"))
     {
         std::cout << options.help() << std::endl;
         return false;
@@ -60,7 +60,7 @@ auto main(int argc, char **argv) -> int
         if (!parse_command_line(argc, argv, configuration))
             return (EXIT_SUCCESS);
         app.init(configuration);
-        app.main_loop();
+        app.process_events();
     }
     catch (const std::exception &e)
     {

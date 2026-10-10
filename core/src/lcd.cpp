@@ -18,10 +18,10 @@ LCD::LCD(RamBus &ram) : _ram(ram)
     _wnd_line = 0;
     _current_mode = Mode::INIT;
     _next_mode = Mode::MODE2;
-    _colors[GrayLevel::TRANSPARENT] = 0x0;
-    _colors[GrayLevel::LIGHT_GRAY] = 0xA0A0A0FF;
-    _colors[GrayLevel::DARK_GRAY] = 0x585858FF;
-    _colors[GrayLevel::BLACK] = 0x000000FF;
+    _colors[GrayLevel::TRANSPARENT] = 0;
+    _colors[GrayLevel::LIGHT_GRAY] = 0xFFA0A0A0;
+    _colors[GrayLevel::DARK_GRAY] = 0xFF585858;
+    _colors[GrayLevel::BLACK] = 0xFF000000;
     _colors[GrayLevel::WHITE] = 0xFFFFFFFF;
     _BGP0[0] = _colors[GrayLevel::WHITE];
     _BGP0[1] = _colors[GrayLevel::LIGHT_GRAY];
@@ -42,21 +42,34 @@ LCD::LCD(RamBus &ram) : _ram(ram)
     _ram.write_register(Register::LCDC, 0x91);
 }
 
-/**
- * @brief Destroy the LCD object
- *
- * Cleans up by destroying the window and associated resources.
- */
-LCD::~LCD()
-{
-}
-
 auto LCD::save_state(StateMap &state) -> void
 {
-    const uint8_t *bytes = reinterpret_cast<const uint8_t *>(_framebuffer.data());
-    state["framebuffer"] = std::vector<uint8_t>(bytes, bytes + _framebuffer.size() * sizeof(uint32_t));
     state["op_cycle"] = (int)_op_cycle;
     state["current_mode"] = (int)_current_mode;
+}
+
+/**
+ * @brief Copies the visible screen out of the padded render surface.
+ *
+ * The internal render surface carries @ref texture_padding bytes on both sides of
+ * every line, and is shifted right by @ref texture_offset. The copy drops that
+ * padding so the returned view holds a tightly packed @ref screen_width by
+ * @ref screen_height RGBA8888 image.
+ *
+ * @return Read-only view of the de-padded frame, valid until the next call.
+ */
+auto LCD::get_graphic_buffer() -> std::span<const uint8_t>
+{
+    const uint32_t *src = _framebuffer.data() + texture_offset;
+    uint32_t *dst = reinterpret_cast<uint32_t *>(_graphic_buffer.data());
+
+    for (int line = 0; line < screen_height; ++line)
+    {
+        std::copy(src, src + screen_width, dst);
+        src += screen_width + texture_padding;
+        dst += screen_width;
+    }
+    return {_graphic_buffer.data(), _graphic_buffer.size()};
 }
 
 /**
