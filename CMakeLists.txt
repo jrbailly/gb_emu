@@ -3,7 +3,11 @@ project(gb_emu)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_COLOR_MAKEFILE ON)
 
-add_compile_options(-Wall -Wextra -Wpedantic -Werror)
+if(MSVC)
+    add_compile_options(/W3)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic -Werror)
+endif()
 
 # ---------------------------------------------------------------------------
 # Frontend selection
@@ -16,9 +20,10 @@ option(FRONTEND_QT "Build with Qt6 frontend" ON)
 # Common dependencies (always required)
 # ---------------------------------------------------------------------------
 find_package(GTest REQUIRED)
-find_package(PkgConfig REQUIRED)
 find_package(libzip REQUIRED)
 find_package(Threads REQUIRED)
+find_package(nlohmann_json REQUIRED)
+include(GoogleTest)
 
 # ---------------------------------------------------------------------------
 # Source files
@@ -64,6 +69,7 @@ if(FRONTEND_QT)
         Qt6::Multimedia
         libzip::zip
         Threads::Threads
+        nlohmann_json::nlohmann_json
     )
 
     target_compile_definitions(gb_emu PRIVATE FRONTEND_QT)
@@ -83,6 +89,7 @@ else()
         SDL3::SDL3
         libzip::zip
         Threads::Threads
+        nlohmann_json::nlohmann_json
     )
 
 endif()
@@ -91,5 +98,5 @@ file(GLOB_RECURSE SRCS_TEST core/src/*.cpp tests/*.cpp)
 install(TARGETS gb_emu DESTINATION bin)
 
 add_executable(gb_emu_test ${SRCS_TEST})
-target_link_libraries(gb_emu_test PRIVATE GTest::gtest_main)
+target_link_libraries(gb_emu_test PRIVATE GTest::gtest_main nlohmann_json::nlohmann_json)
 gtest_discover_tests(gb_emu_test)

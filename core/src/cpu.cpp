@@ -174,7 +174,7 @@ auto CPU::decode() -> uint8_t
     uint8_t reg = _map_reg[(opcode >> 3) & 0x7];
     uint16_t address;
     uint16_t value;
-    uint16_t carry = (_registers.regs8[Reg8::F] >> 4) & 1;
+    uint8_t carry = (_registers.regs8[Reg8::F] >> 4) & 1;
     int8_t relative;
     int8_t cycles_count = 0;
     bool result;

@@ -1,6 +1,7 @@
 #include "cartridge.h"
 #include "ram.h"
 #include <array>
+#include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
 
@@ -22,8 +23,6 @@
 // Header bytes inside block 0 are patched after filling, so the fill is only visible
 // at non-header addresses (0x0000, 0x4000, etc.).
 
-static constexpr const char *ROM_PATH = "/tmp/gb_emu_test_cartridge.gb";
-
 class CartridgeTest : public ::testing::Test
 {
   protected:
@@ -32,6 +31,10 @@ class CartridgeTest : public ::testing::Test
         ram.clear();
     }
 
+    static std::string rom_path()
+    {
+        return (std::filesystem::temp_directory_path() / "gb_emu_test_cartridge.gb").string();
+    }
     /**
      * @brief Returns the expected fill byte for a given block index.
      * @details block 0 → 0xAA, block 1 → 0xBB, block 2 → 0xCC, block 3 → 0xDD.
@@ -81,8 +84,8 @@ class CartridgeTest : public ::testing::Test
      */
     void init_4bank_mbc1()
     {
-        write_temp_rom(ROM_PATH, 4);
-        cartridge.read_rom(ROM_PATH);
+        write_temp_rom(CartridgeTest::rom_path(), 4);
+        cartridge.read_rom(CartridgeTest::rom_path());
         cartridge.init(ram);
         cartridge.load_rom(ram);
     }
@@ -111,11 +114,11 @@ TEST_F(CartridgeTest, ReadRom_ThrowsOnFileNotFound)
 TEST_F(CartridgeTest, ReadRom_ThrowsOnFileSmallerThanOneBlock)
 {
     {
-        std::ofstream f(ROM_PATH, std::ios::binary);
+        std::ofstream f(CartridgeTest::rom_path(), std::ios::binary);
         std::array<char, 100> tiny{};
         f.write(tiny.data(), static_cast<std::streamsize>(tiny.size()));
     }
-    EXPECT_THROW(cartridge.read_rom(ROM_PATH), std::runtime_error);
+    EXPECT_THROW(cartridge.read_rom(CartridgeTest::rom_path()), std::runtime_error);
 }
 
 // ---------------------------------------------------------------------------
@@ -127,8 +130,8 @@ TEST_F(CartridgeTest, ReadRom_ThrowsOnFileSmallerThanOneBlock)
  */
 TEST_F(CartridgeTest, ReadRom_AcceptsCGBFlag_DMG_ONLY)
 {
-    write_temp_rom(ROM_PATH, 1, Cartridge::DMG_ONLY, Cartridge::ROM_ONLY);
-    EXPECT_NO_THROW(cartridge.read_rom(ROM_PATH));
+    write_temp_rom(CartridgeTest::rom_path(), 1, Cartridge::DMG_ONLY, Cartridge::ROM_ONLY);
+    EXPECT_NO_THROW(cartridge.read_rom(CartridgeTest::rom_path()));
 }
 
 /**
@@ -136,8 +139,8 @@ TEST_F(CartridgeTest, ReadRom_AcceptsCGBFlag_DMG_ONLY)
  */
 TEST_F(CartridgeTest, ReadRom_AcceptsCGBFlag_DMG_CGB)
 {
-    write_temp_rom(ROM_PATH, 1, Cartridge::DMG_CGB, Cartridge::ROM_ONLY);
-    EXPECT_NO_THROW(cartridge.read_rom(ROM_PATH));
+    write_temp_rom(CartridgeTest::rom_path(), 1, Cartridge::DMG_CGB, Cartridge::ROM_ONLY);
+    EXPECT_NO_THROW(cartridge.read_rom(CartridgeTest::rom_path()));
 }
 
 /**
@@ -146,8 +149,8 @@ TEST_F(CartridgeTest, ReadRom_AcceptsCGBFlag_DMG_CGB)
  */
 TEST_F(CartridgeTest, ReadRom_ThrowsOnCGBFlag_CGB_ONLY)
 {
-    write_temp_rom(ROM_PATH, 1, Cartridge::CGB_ONLY, Cartridge::ROM_ONLY);
-    EXPECT_THROW(cartridge.read_rom(ROM_PATH), std::runtime_error);
+    write_temp_rom(CartridgeTest::rom_path(), 1, Cartridge::CGB_ONLY, Cartridge::ROM_ONLY);
+    EXPECT_THROW(cartridge.read_rom(CartridgeTest::rom_path()), std::runtime_error);
 }
 
 // ---------------------------------------------------------------------------
@@ -159,8 +162,8 @@ TEST_F(CartridgeTest, ReadRom_ThrowsOnCGBFlag_CGB_ONLY)
  */
 TEST_F(CartridgeTest, ReadRom_AcceptsCartridgeType_ROM_ONLY)
 {
-    write_temp_rom(ROM_PATH, 1, Cartridge::DMG_ONLY, Cartridge::ROM_ONLY);
-    EXPECT_NO_THROW(cartridge.read_rom(ROM_PATH));
+    write_temp_rom(CartridgeTest::rom_path(), 1, Cartridge::DMG_ONLY, Cartridge::ROM_ONLY);
+    EXPECT_NO_THROW(cartridge.read_rom(CartridgeTest::rom_path()));
 }
 
 /**
@@ -168,8 +171,8 @@ TEST_F(CartridgeTest, ReadRom_AcceptsCartridgeType_ROM_ONLY)
  */
 TEST_F(CartridgeTest, ReadRom_AcceptsCartridgeType_MBC1)
 {
-    write_temp_rom(ROM_PATH, 2, Cartridge::DMG_ONLY, Cartridge::MBC1);
-    EXPECT_NO_THROW(cartridge.read_rom(ROM_PATH));
+    write_temp_rom(CartridgeTest::rom_path(), 2, Cartridge::DMG_ONLY, Cartridge::MBC1);
+    EXPECT_NO_THROW(cartridge.read_rom(CartridgeTest::rom_path()));
 }
 
 /**
@@ -177,8 +180,8 @@ TEST_F(CartridgeTest, ReadRom_AcceptsCartridgeType_MBC1)
  */
 TEST_F(CartridgeTest, ReadRom_AcceptsCartridgeType_MBC1_RAM)
 {
-    write_temp_rom(ROM_PATH, 2, Cartridge::DMG_ONLY, Cartridge::MBC1_RAM);
-    EXPECT_NO_THROW(cartridge.read_rom(ROM_PATH));
+    write_temp_rom(CartridgeTest::rom_path(), 2, Cartridge::DMG_ONLY, Cartridge::MBC1_RAM);
+    EXPECT_NO_THROW(cartridge.read_rom(CartridgeTest::rom_path()));
 }
 
 /**
@@ -186,8 +189,8 @@ TEST_F(CartridgeTest, ReadRom_AcceptsCartridgeType_MBC1_RAM)
  */
 TEST_F(CartridgeTest, ReadRom_AcceptsCartridgeType_MBC1_RAM_BATTERY)
 {
-    write_temp_rom(ROM_PATH, 2, Cartridge::DMG_ONLY, Cartridge::MBC1_RAM_BATTERY);
-    EXPECT_NO_THROW(cartridge.read_rom(ROM_PATH));
+    write_temp_rom(CartridgeTest::rom_path(), 2, Cartridge::DMG_ONLY, Cartridge::MBC1_RAM_BATTERY);
+    EXPECT_NO_THROW(cartridge.read_rom(CartridgeTest::rom_path()));
 }
 
 /**
@@ -196,8 +199,8 @@ TEST_F(CartridgeTest, ReadRom_AcceptsCartridgeType_MBC1_RAM_BATTERY)
  */
 TEST_F(CartridgeTest, ReadRom_ThrowsOnUnsupportedCartridgeType_MBC2)
 {
-    write_temp_rom(ROM_PATH, 2, Cartridge::DMG_ONLY, static_cast<uint8_t>(Cartridge::MBC2));
-    EXPECT_THROW(cartridge.read_rom(ROM_PATH), std::runtime_error);
+    write_temp_rom(CartridgeTest::rom_path(), 2, Cartridge::DMG_ONLY, static_cast<uint8_t>(Cartridge::MBC2));
+    EXPECT_THROW(cartridge.read_rom(CartridgeTest::rom_path()), std::runtime_error);
 }
 
 // ---------------------------------------------------------------------------
@@ -211,8 +214,8 @@ TEST_F(CartridgeTest, ReadRom_ThrowsOnUnsupportedCartridgeType_MBC2)
  */
 TEST_F(CartridgeTest, LoadRom_Block0_MappedAt0x0000)
 {
-    write_temp_rom(ROM_PATH, 2);
-    cartridge.read_rom(ROM_PATH);
+    write_temp_rom(CartridgeTest::rom_path(), 2);
+    cartridge.read_rom(CartridgeTest::rom_path());
     cartridge.init(ram);
     cartridge.load_rom(ram);
 
@@ -224,8 +227,8 @@ TEST_F(CartridgeTest, LoadRom_Block0_MappedAt0x0000)
  */
 TEST_F(CartridgeTest, LoadRom_Block1_MappedAt0x4000)
 {
-    write_temp_rom(ROM_PATH, 2);
-    cartridge.read_rom(ROM_PATH);
+    write_temp_rom(CartridgeTest::rom_path(), 2);
+    cartridge.read_rom(CartridgeTest::rom_path());
     cartridge.init(ram);
     cartridge.load_rom(ram);
 
@@ -241,8 +244,8 @@ TEST_F(CartridgeTest, LoadRom_SingleBlock_DoesNotOverwrite0x4000)
 {
     ram.write_register(0x4000, 0x5A);
 
-    write_temp_rom(ROM_PATH, 1, Cartridge::DMG_ONLY, Cartridge::ROM_ONLY);
-    cartridge.read_rom(ROM_PATH);
+    write_temp_rom(CartridgeTest::rom_path(), 1, Cartridge::DMG_ONLY, Cartridge::ROM_ONLY);
+    cartridge.read_rom(CartridgeTest::rom_path());
     cartridge.init(ram);
     cartridge.load_rom(ram);
 
