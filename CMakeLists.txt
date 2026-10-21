@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 project(gb_emu)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_COLOR_MAKEFILE ON)
+enable_testing()
 
 if(MSVC)
     add_compile_options(/W3)
@@ -33,7 +34,7 @@ file(GLOB CORE_SRCS core/src/*.cpp)
 include_directories("inc" "core/inc" "frontend/inc")
 
 if(FRONTEND_QT)
-    find_package(Qt6 6.5 REQUIRED COMPONENTS Core Quick Qml Multimedia LinguistTools)
+    find_package(Qt6 6.7 REQUIRED COMPONENTS Core Quick Qml Multimedia LinguistTools)
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTORCC ON)
 
@@ -48,11 +49,14 @@ if(FRONTEND_QT)
         QML_FILES
         ui/Main.qml
         ui/AboutDialog.qml
+        ui/KeyBindingsDialog.qml
         SOURCES
         frontend/inc/frontend_qt.h
         frontend/src/frontend_qt.cpp
         frontend/inc/gb_framebuffer_item.h
         frontend/src/gb_framebuffer_item.cpp
+        frontend/inc/controllers_qt.h
+        frontend/src/controllers_qt.cpp
     )
 
     qt_add_translations(gb_emu
@@ -99,4 +103,11 @@ install(TARGETS gb_emu DESTINATION bin)
 
 add_executable(gb_emu_test ${SRCS_TEST})
 target_link_libraries(gb_emu_test PRIVATE GTest::gtest_main nlohmann_json::nlohmann_json)
+
+# Copy the CPU tests into the build directory.
+add_custom_command(TARGET gb_emu_test POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/cpu_tests"
+            "${CMAKE_CURRENT_BINARY_DIR}/cpu_tests")
+
 gtest_discover_tests(gb_emu_test)

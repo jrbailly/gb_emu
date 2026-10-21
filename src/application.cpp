@@ -68,36 +68,43 @@ auto Application::main_loop() -> void
     uint8_t button = 0;
     std::string romfile;
 
-    _frontend->init();
-    while (!_quit)
+    try
     {
-        // Process inputs
-        _frontend->get_input(pad, button);
-        if (_record)
-            _record->get_input(pad, button);
-        _emulator->set_input(pad, button);
-
-        // Process requests
-        if (_frontend->pop_save_request())
-            save_state_json();
-        if (_frontend->pop_load_request())
-            load_state_json();
-        if (_frontend->pop_rom_request(romfile))
+        _frontend->init();
+        while (!_quit)
         {
-            _emulator->load_rom(romfile);
-            _config._romfile = romfile;
+            // Process requests
+            if (_frontend->pop_save_request())
+                save_state_json();
+            if (_frontend->pop_load_request())
+                load_state_json();
+            if (_frontend->pop_rom_request(romfile))
+            {
+                _emulator->load_rom(romfile);
+                _config._romfile = romfile;
+            }
+
+            // Process inputs
+            _frontend->get_input(pad, button);
+            if (_record)
+                _record->get_input(pad, button);
+            _emulator->set_input(pad, button);
+
+            // Frame simulation
+            _emulator->step_frame();
+
+            // Rendering
+            _emulator->save_state(_save_states[_save_state_index]);
+            _frontend->play_audio(_emulator->get_audio_buffer());
+            _frontend->render(_emulator->get_graphic_buffer());
+            _save_state_index = (_save_state_index + 1) % save_state_buffer_size;
+
+            _frontend->delay();
         }
-
-        // Frame simulation
-        _emulator->step_frame();
-
-        // Rendering
-        _emulator->save_state(_save_states[_save_state_index]);
-        _frontend->play_audio(_emulator->get_audio_buffer());
-        _frontend->render(_emulator->get_graphic_buffer());
-        _save_state_index = (_save_state_index + 1) % save_state_buffer_size;
-
-        _frontend->delay();
+    }
+    catch (const std::exception &e)
+    {
+        _frontend->log(e.what());
     }
 }
 

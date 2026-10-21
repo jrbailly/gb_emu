@@ -29,6 +29,7 @@ class FrontendSDL : public IFrontend
     {
         return samplerate;
     };
+    auto log(std::string_view message) -> void override;
 
   private:
     auto init_audio() -> void;

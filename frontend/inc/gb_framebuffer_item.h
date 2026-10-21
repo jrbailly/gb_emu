@@ -10,7 +10,7 @@ class GBFramebufferItem : public QQuickItem
 {
     Q_OBJECT
     QML_ELEMENT
-    Q_PROPERTY(Framebuffer *frame READ frame WRITE setFrame)
+    Q_PROPERTY(Framebuffer *frame READ frame WRITE set_frame)
   public:
     explicit GBFramebufferItem(QQuickItem *parent = nullptr);
     ~GBFramebufferItem() override = default;
@@ -19,7 +19,7 @@ class GBFramebufferItem : public QQuickItem
     {
         return _framebuffer;
     }
-    auto setFrame(Framebuffer *framebuffer) -> void;
+    auto set_frame(Framebuffer *framebuffer) -> void;
 
   protected:
     auto updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *data) -> QSGNode * override;

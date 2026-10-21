@@ -15,39 +15,95 @@
     </message>
 </context>
 <context>
-    <name>Main</name>
+    <name>ControllersQt</name>
     <message>
-        <location filename="../ui/Main.qml" line="+16"/>
-        <source>&amp;File</source>
-        <translation>&amp;File</translation>
+        <location filename="../frontend/src/controllers_qt.cpp" line="+13"/>
+        <source>Up</source>
+        <translation>Up</translation>
     </message>
     <message>
         <location line="+2"/>
-        <source>&amp;Load ROM...</source>
-        <translation>&amp;Load ROM...</translation>
+        <source>Down</source>
+        <translation>Down</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Left</source>
+        <translation>Left</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Right</source>
+        <translation>Right</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Select</source>
+        <translation>Select</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Start</source>
+        <translation>Start</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>A</source>
+        <translation>A</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>B</source>
+        <translation>B</translation>
+    </message>
+</context>
+<context>
+    <name>KeyBindingsDialog</name>
+    <message>
+        <location filename="../ui/KeyBindingsDialog.qml" line="+9"/>
+        <source>Keyboard Bindings</source>
+        <translation>Keyboard Bindings</translation>
+    </message>
+    <message>
+        <location line="+23"/>
+        <source>Press a key...</source>
+        <translation>Press a key...</translation>
+    </message>
+</context>
+<context>
+    <name>Main</name>
+    <message>
+        <location filename="../ui/Main.qml" line="+16"/>
+        <source>File</source>
+        <translation>File</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Load ROM...</source>
+        <translation>Load ROM...</translation>
     </message>
     <message>
         <location line="+5"/>
-        <source>&amp;Save State</source>
-        <translation>&amp;Save State</translation>
+        <source>Save State</source>
+        <translation>Save State</translation>
     </message>
     <message>
         <location line="+5"/>
-        <source>&amp;Load State</source>
-        <translation>&amp;Load State</translation>
+        <source>Load State</source>
+        <translation>Load State</translation>
     </message>
     <message>
         <location line="+6"/>
-        <source>&amp;Quit</source>
-        <translation>&amp;Quit</translation>
+        <source>Quit</source>
+        <translation>Quit</translation>
     </message>
     <message>
         <location line="+5"/>
-        <source>&amp;Screen</source>
-        <translation>&amp;Screen</translation>
+        <source>Screen</source>
+        <translation>Screen</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+11"/>
         <source>x1</source>
         <translation>x1</translation>
     </message>
@@ -62,17 +118,37 @@
         <translation>x3</translation>
     </message>
     <message>
-        <location line="+8"/>
-        <source>&amp;Help</source>
-        <translation>&amp;Help</translation>
+        <location line="-22"/>
+        <source>Scale</source>
+        <translation>Scale</translation>
+    </message>
+    <message>
+        <location line="+33"/>
+        <source>Language</source>
+        <translation>Language</translation>
+    </message>
+    <message>
+        <location line="+24"/>
+        <source>Controller</source>
+        <translation>Controller</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Keyboard</source>
+        <translation>Keyboard</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Help</source>
+        <translation>Help</translation>
     </message>
     <message>
         <location line="+2"/>
-        <source>&amp;About</source>
-        <translation>&amp;About</translation>
+        <source>About</source>
+        <translation>About</translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+19"/>
         <source>Load ROM</source>
         <translation>Load ROM</translation>
     </message>

@@ -3,6 +3,7 @@
 #include "emulator.h"
 #include <cstring>
 #include <format>
+#include <iostream>
 #include <vector>
 
 /**
@@ -28,6 +29,15 @@ auto FrontendSDL::init() -> void
     init_audio();
     init_graphics();
     init_controllers();
+}
+
+/**
+ * @brief Reports an error message on the standard error stream.
+ * @param message Message to report.
+ */
+auto FrontendSDL::log(std::string_view message) -> void
+{
+    std::cerr << message << std::endl;
 }
 
 /**
@@ -73,18 +83,18 @@ auto FrontendSDL::init_graphics() -> void
  */
 auto FrontendSDL::init_controllers() -> void
 {
-    _dpads_binding_keys[SDLK_UP] = Controllers::UP;
-    _dpads_binding_keys[SDLK_DOWN] = Controllers::DOWN;
-    _dpads_binding_keys[SDLK_LEFT] = Controllers::LEFT;
-    _dpads_binding_keys[SDLK_RIGHT] = Controllers::RIGHT;
+    _dpads_binding_keys[SDLK_Z] = Controllers::UP;
+    _dpads_binding_keys[SDLK_S] = Controllers::DOWN;
+    _dpads_binding_keys[SDLK_Q] = Controllers::LEFT;
+    _dpads_binding_keys[SDLK_D] = Controllers::RIGHT;
     _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_UP] = Controllers::UP;
     _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_DOWN] = Controllers::DOWN;
     _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_LEFT] = Controllers::LEFT;
     _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_RIGHT] = Controllers::RIGHT;
     _buttons_binding_keys[SDLK_RETURN] = Controllers::START;
     _buttons_binding_keys[SDLK_BACKSPACE] = Controllers::SELECT;
-    _buttons_binding_keys[SDLK_LCTRL] = Controllers::A;
-    _buttons_binding_keys[SDLK_LALT] = Controllers::B;
+    _buttons_binding_keys[SDLK_L] = Controllers::A;
+    _buttons_binding_keys[SDLK_K] = Controllers::B;
     _buttons_binding_gamepad[SDL_GAMEPAD_BUTTON_START] = Controllers::START;
     _buttons_binding_gamepad[SDL_GAMEPAD_BUTTON_GUIDE] = Controllers::SELECT;
     _buttons_binding_gamepad[SDL_GAMEPAD_BUTTON_SOUTH] = Controllers::A;
@@ -130,11 +140,11 @@ auto FrontendSDL::get_input(uint8_t &pad, uint8_t &button) -> void
  *
  * Key and gamepad button events update the internal d-pad and button bitmasks,
  * while other events may raise the save or load request flags consumed by
- * @ref pop_save_request and @ref pop_load_request. A quit event ends the
- * blocking event loop in @ref process_events.
+ * @ref pop_save_request and @ref pop_load_request. A quit event or the Escape
+ * key ends the blocking event loop in @ref process_events.
  *
  * @param event Event to decode.
- * @return true if a quit event was received.
+ * @return true if a quit event or the Escape key was received.
  */
 auto FrontendSDL::event_filter(const SDL_Event &event) -> bool
 {
@@ -143,6 +153,8 @@ auto FrontendSDL::event_filter(const SDL_Event &event) -> bool
     case SDL_EVENT_QUIT:
         return true;
     case SDL_EVENT_KEY_DOWN:
+        if (event.key.key == SDLK_ESCAPE)
+            return true;
         if (event.key.key == SDLK_F1)
             _save_requested = true;
         if (event.key.key == SDLK_F2)

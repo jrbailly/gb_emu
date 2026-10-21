@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <string_view>
 
 class IFrontend
 {
@@ -20,6 +21,7 @@ class IFrontend
     virtual auto play_audio(std::span<const int16_t> buffer) -> void = 0;
     virtual auto render(std::span<const uint8_t> buffer) -> void = 0;
     virtual auto get_samplerate() -> uint32_t = 0;
+    virtual auto log(std::string_view message) -> void = 0;
 };
 
 #endif

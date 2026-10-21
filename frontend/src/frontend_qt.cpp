@@ -1,10 +1,15 @@
 #include "frontend_qt.h"
 #include "controllers.h"
 #include "version.h"
+#include <QDebug>
 #include <QKeyEvent>
+#include <QKeySequence>
 #include <QMediaDevices>
 #include <QQmlContext>
+#include <QThread>
 #include <QUrl>
+#include <algorithm>
+#include <array>
 #include <format>
 #include <stdexcept>
 #include <vector>
@@ -21,7 +26,8 @@ FrontendQt::FrontendQt(const Config &config, float refresh_rate)
     _next_frame = _increment_frame;
     init_qt();
     init_audio();
-    init_controllers();
+    _controllers.init_controllers();
+    connect(this, &FrontendQt::languageChanged, &_controllers, &ControllersQt::keyBindingsChanged);
 }
 
 /**
@@ -31,6 +37,7 @@ FrontendQt::~FrontendQt()
 {
     if (_audio_sink)
         _audio_sink->stop();
+    _app.removeTranslator(_translator.get());
 }
 
 /**
@@ -39,49 +46,6 @@ FrontendQt::~FrontendQt()
 auto FrontendQt::init() -> void
 {
     _elapsed_timer.start();
-}
-
-/**
- * @brief Filters Qt application events to update the input state and request flags.
- *
- * Key press and release events update the internal d-pad and button bitmasks.
- * F1 and F2 raise the save or load requests through @ref save_state and
- * @ref load_state, which are consumed by @ref pop_save_request and @ref pop_load_request.
- *
- * @param object Watched object (unused).
- * @param event  Event being filtered.
- * @return true if the event should be filtered out, false otherwise.
- */
-auto FrontendQt::eventFilter(QObject *object, QEvent *event) -> bool
-{
-    QKeyEvent *key = nullptr;
-
-    switch (event->type())
-    {
-    case QEvent::KeyPress:
-        key = static_cast<QKeyEvent *>(event);
-        if (!key->isAutoRepeat())
-        {
-            if (_dpads_binding_keys.count(key->key()))
-                _dpads &= ~_dpads_binding_keys[key->key()];
-            if (_buttons_binding_keys.count(key->key()))
-                _buttons &= ~_buttons_binding_keys[key->key()];
-        }
-        break;
-    case QEvent::KeyRelease:
-        key = static_cast<QKeyEvent *>(event);
-        if (!key->isAutoRepeat())
-        {
-            if (_dpads_binding_keys.count(key->key()))
-                _dpads |= _dpads_binding_keys[key->key()];
-            if (_buttons_binding_keys.count(key->key()))
-                _buttons |= _buttons_binding_keys[key->key()];
-        }
-        break;
-    default:
-        break;
-    }
-    return QObject::eventFilter(object, event);
 }
 
 /**
@@ -95,8 +59,8 @@ auto FrontendQt::eventFilter(QObject *object, QEvent *event) -> bool
  */
 auto FrontendQt::get_input(uint8_t &pad, uint8_t &button) -> void
 {
-    pad = _dpads;
-    button = _buttons;
+    pad = _controllers.get_dpads();
+    button = _controllers.get_buttons();
 }
 
 /**
@@ -210,6 +174,15 @@ auto FrontendQt::get_samplerate() -> uint32_t
 }
 
 /**
+ * @brief Reports an error message through the Qt logging system.
+ * @param message Message to report.
+ */
+auto FrontendQt::log(std::string_view message) -> void
+{
+    qWarning().noquote() << QString::fromUtf8(message.data(), static_cast<qsizetype>(message.size()));
+}
+
+/**
  * @brief Requests the loading of a ROM file selected from the QML interface.
  *
  * Only stores the selected path and raises the request flag; the emulation thread
@@ -270,28 +243,47 @@ auto FrontendQt::load_state() -> void
  */
 auto FrontendQt::init_qt() -> void
 {
-    _app.installEventFilter(this);
+    _app.installEventFilter(&_controllers);
     _app.setApplicationName(QString(app_name.data()));
     _app.setApplicationVersion(QString(app_version.data()));
-    init_translations();
+    set_language();
     _engine.rootContext()->setContextProperty("FrontendQt", this);
+    _engine.rootContext()->setContextProperty("ControllersQt", &_controllers);
     _engine.loadFromModule("Gbemu", "Main");
     if (_engine.rootObjects().isEmpty())
         throw std::runtime_error("Failed to load QML interface");
 }
 
 /**
- * @brief Installs the translation matching the system locale, if one is available.
+ * @brief Switches the interface language, falling back to the system locale.
  *
- * The .qm files are embedded in the executable by qt_add_translations under :/i18n/.
- * When no translation matches the current locale, the interface falls back to the
- * strings as written in the sources.
+ * The requested code is used when its embedded translation exists; otherwise the
+ * translation matching the system locale is loaded. The QML engine then
+ * retranslates every qsTr() binding so the interface updates immediately.
+ *
+ * @param code Language code (e.g. "fr", "en"). Empty selects the system locale.
  */
-auto FrontendQt::init_translations() -> void
+auto FrontendQt::set_language(const QString &code) -> void
 {
-    _translator = std::make_unique<QTranslator>();
-    if (_translator->load(QLocale(), app_name.data(), "_", ":/i18n"))
-        _app.installTranslator(_translator.get());
+    auto translator = std::make_unique<QTranslator>();
+    const QString prefix = QString(":/i18n/%1_").arg(app_name.data());
+
+    if (!code.isEmpty() && translator->load(prefix + code + ".qm"))
+        _language = code;
+    else if (translator->load(QLocale(), app_name.data(), "_", ":/i18n"))
+        _language = QLocale().name().section('_', 0, 0);
+    else
+    {
+        qWarning() << "No translation available for" << code;
+        return;
+    }
+
+    if (_translator)
+        _app.removeTranslator(_translator.get());
+    _translator = std::move(translator);
+    _app.installTranslator(_translator.get());
+    emit languageChanged();
+    _engine.retranslate();
 }
 
 /**
@@ -317,19 +309,4 @@ auto FrontendQt::init_audio() -> void
     _audio_device = _audio_sink->start();
     if (!_audio_device)
         throw std::runtime_error("QAudioSink::start: failed to open audio device");
-}
-
-/**
- * @brief Initializes the keyboard input bindings.
- */
-auto FrontendQt::init_controllers() -> void
-{
-    _dpads_binding_keys[Qt::Key_Up] = Controllers::UP;
-    _dpads_binding_keys[Qt::Key_Down] = Controllers::DOWN;
-    _dpads_binding_keys[Qt::Key_Left] = Controllers::LEFT;
-    _dpads_binding_keys[Qt::Key_Right] = Controllers::RIGHT;
-    _buttons_binding_keys[Qt::Key_Return] = Controllers::START;
-    _buttons_binding_keys[Qt::Key_Backspace] = Controllers::SELECT;
-    _buttons_binding_keys[Qt::Key_Control] = Controllers::A;
-    _buttons_binding_keys[Qt::Key_Alt] = Controllers::B;
 }

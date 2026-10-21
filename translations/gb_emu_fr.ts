@@ -15,39 +15,95 @@
     </message>
 </context>
 <context>
-    <name>Main</name>
+    <name>ControllersQt</name>
     <message>
-        <location filename="../ui/Main.qml" line="+16"/>
-        <source>&amp;File</source>
-        <translation>&amp;Fichier</translation>
+        <location filename="../frontend/src/controllers_qt.cpp" line="+13"/>
+        <source>Up</source>
+        <translation>Haut</translation>
     </message>
     <message>
         <location line="+2"/>
-        <source>&amp;Load ROM...</source>
-        <translation>&amp;Charger une ROM...</translation>
+        <source>Down</source>
+        <translation>Bas</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Left</source>
+        <translation>Gauche</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Right</source>
+        <translation>Droite</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Select</source>
+        <translation>Select</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Start</source>
+        <translation>Start</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>A</source>
+        <translation>A</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>B</source>
+        <translation>B</translation>
+    </message>
+</context>
+<context>
+    <name>KeyBindingsDialog</name>
+    <message>
+        <location filename="../ui/KeyBindingsDialog.qml" line="+9"/>
+        <source>Keyboard Bindings</source>
+        <translation>Raccourcis clavier</translation>
+    </message>
+    <message>
+        <location line="+23"/>
+        <source>Press a key...</source>
+        <translation>Appuyez sur une touche...</translation>
+    </message>
+</context>
+<context>
+    <name>Main</name>
+    <message>
+        <location filename="../ui/Main.qml" line="+16"/>
+        <source>File</source>
+        <translation>Fichier</translation>
+    </message>
+    <message>
+        <location line="+2"/>
+        <source>Load ROM...</source>
+        <translation>Charger une ROM...</translation>
     </message>
     <message>
         <location line="+5"/>
-        <source>&amp;Save State</source>
-        <translation>&amp;Sauvegarder l'état</translation>
+        <source>Save State</source>
+        <translation>Sauvegarder l&apos;état</translation>
     </message>
     <message>
         <location line="+5"/>
-        <source>&amp;Load State</source>
-        <translation>&amp;Charger l'état</translation>
+        <source>Load State</source>
+        <translation>Charger l&apos;état</translation>
     </message>
     <message>
         <location line="+6"/>
-        <source>&amp;Quit</source>
-        <translation>&amp;Quitter</translation>
+        <source>Quit</source>
+        <translation>Quitter</translation>
     </message>
     <message>
         <location line="+5"/>
-        <source>&amp;Screen</source>
-        <translation>&amp;Affichage</translation>
+        <source>Screen</source>
+        <translation>Affichage</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="+11"/>
         <source>x1</source>
         <translation>x1</translation>
     </message>
@@ -62,17 +118,37 @@
         <translation>x3</translation>
     </message>
     <message>
-        <location line="+8"/>
-        <source>&amp;Help</source>
-        <translation>&amp;Aide</translation>
+        <location line="-22"/>
+        <source>Scale</source>
+        <translation>Échelle</translation>
+    </message>
+    <message>
+        <location line="+33"/>
+        <source>Language</source>
+        <translation>Langue</translation>
+    </message>
+    <message>
+        <location line="+24"/>
+        <source>Controller</source>
+        <translation>Contrôleur</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Keyboard</source>
+        <translation>Clavier</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Help</source>
+        <translation>Aide</translation>
     </message>
     <message>
         <location line="+2"/>
-        <source>&amp;About</source>
-        <translation>&amp;À propos</translation>
+        <source>About</source>
+        <translation>À propos</translation>
     </message>
     <message>
-        <location line="+12"/>
+        <location line="+19"/>
         <source>Load ROM</source>
         <translation>Charger une ROM</translation>
     </message>

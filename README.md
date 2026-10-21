@@ -8,8 +8,9 @@ The project is under development and aims to provide an authentic retro gaming e
 It can actually run : Super Mario Land, Tetris , Mario's Picross, Legend of Zelda The - Link's Awakening 
 
 ### Keybinding
-- A = Left ctrl
-- B = Left alt
+- D-pad = Z / Q / S / D
+- A = L
+- B = K
 - start = Enter
 - select = Backspace
 - F1 = Save current state

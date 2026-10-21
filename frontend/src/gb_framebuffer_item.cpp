@@ -23,7 +23,7 @@ GBFramebufferItem::GBFramebufferItem(QQuickItem *parent) : QQuickItem(parent)
  *
  * @param framebuffer Framebuffer published by the frontend, or nullptr to clear.
  */
-auto GBFramebufferItem::setFrame(Framebuffer *framebuffer) -> void
+auto GBFramebufferItem::set_frame(Framebuffer *framebuffer) -> void
 {
     _framebuffer = framebuffer;
     _frame_dirty = true;
