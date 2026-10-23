@@ -14,7 +14,6 @@ ApplicationWindow {
     maximumWidth: FrontendQt.screenWidth
     minimumHeight: FrontendQt.screenHeight + menuBar.height
     maximumHeight: FrontendQt.screenHeight + menuBar.height
-    flags: Qt.Window | Qt.MSWindowsFixedSizeDialogHint
     visible: true
 
     menuBar: MenuBar {

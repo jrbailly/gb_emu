@@ -3,8 +3,18 @@
 #include <QCoreApplication>
 #include <QKeyEvent>
 #include <QKeySequence>
+#include <QSet>
 #include <QVariantMap>
 #include <algorithm>
+
+/**
+ * @brief Constructs the controller with the settings shared by the Qt frontend.
+ *
+ * @param settings Settings instance owned by the frontend.
+ */
+ControllersQt::ControllersQt(QSettings &settings) : _settings(settings)
+{
+}
 
 /**
  * @brief Initializes the keyboard input bindings.
@@ -28,6 +38,7 @@ auto ControllersQt::init_controllers() -> void
     _buttons_binding_keys[Qt::Key_K] = {QT_TRANSLATE_NOOP("ControllersQt", "B"), Controllers::B,
                                         QKeySequence(Qt::Key_K).toString(QKeySequence::NativeText), 7};
 
+    load_settings();
     emit keyBindingsChanged();
 }
 
@@ -65,6 +76,66 @@ auto ControllersQt::keyBindings() const -> QVariantList
 }
 
 /**
+ * @brief Restores one binding table from the settings, keeping the defaults when absent.
+ *
+ * @param bindings Binding table to update, indexed by Qt key code.
+ */
+auto ControllersQt::load_bindings(QMap<int, KeyBinding> &bindings) -> void
+{
+    QMap<int, KeyBinding> loaded;
+
+    for (const auto &[default_code, binding] : bindings.asKeyValueRange())
+    {
+        const QString setting_key = QStringLiteral("bind_%1").arg(binding.order);
+        int key_code = default_code;
+
+        if (_settings.contains(setting_key))
+        {
+            bool ok = false;
+            const int stored_code = _settings.value(setting_key).toInt(&ok);
+
+            if (ok && stored_code > 0)
+                key_code = stored_code;
+            else
+                qWarning() << "ControllersQt: invalid key code for" << setting_key << ", using default";
+        }
+
+        loaded.insert(key_code, {binding.controller_name, binding.mask,
+                                 QKeySequence(key_code).toString(QKeySequence::NativeText), binding.order});
+    }
+    bindings = loaded;
+}
+
+/**
+ * @brief Restores the key bindings from the settings, keeping the defaults when absent.
+ */
+auto ControllersQt::load_settings() -> void
+{
+    _settings.beginGroup(QStringLiteral("keyboard"));
+    load_bindings(_dpads_binding_keys);
+    load_bindings(_buttons_binding_keys);
+    _settings.endGroup();
+}
+
+/**
+ * @brief Writes the current key bindings, one entry per binding order.
+ */
+auto ControllersQt::save_settings() -> void
+{
+    _settings.beginGroup(QStringLiteral("keyboard"));
+    _settings.remove(QString());
+
+    for (const auto &[key_code, binding] : _dpads_binding_keys.asKeyValueRange())
+        _settings.setValue(QStringLiteral("bind_%1").arg(binding.order), key_code);
+
+    for (const auto &[key_code, binding] : _buttons_binding_keys.asKeyValueRange())
+        _settings.setValue(QStringLiteral("bind_%1").arg(binding.order), key_code);
+
+    _settings.endGroup();
+    _settings.sync();
+}
+
+/**
  * @brief Moves the binding of the key being rebound to a new key.
  *
  * @param key_code Qt key code of the key just pressed.
@@ -89,6 +160,7 @@ auto ControllersQt::rebind_key(int key_code) -> void
     _rebinding_key = -1;
     emit rebindingChanged();
     emit keyBindingsChanged();
+    save_settings();
 }
 
 /**

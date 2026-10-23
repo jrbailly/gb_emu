@@ -38,9 +38,14 @@ if(FRONTEND_QT)
     set(CMAKE_AUTOMOC ON)
     set(CMAKE_AUTORCC ON)
 
+    set(FRONTEND_SRCS
+        frontend/src/audio_qt.cpp
+    )
+
     qt_add_executable(gb_emu
         ${APP_SRCS}
         ${CORE_SRCS}
+        ${FRONTEND_SRCS}
     )
 
     qt_add_qml_module(gb_emu
@@ -81,7 +86,10 @@ if(FRONTEND_QT)
 else()
     find_package(SDL3 REQUIRED CONFIG REQUIRED COMPONENTS SDL3-shared)
 
-    file(GLOB FRONTEND_SRCS frontend/src/frontend_sdl.cpp)
+    file(GLOB FRONTEND_SRCS
+        frontend/src/frontend_sdl.cpp
+        frontend/src/audio_sdl.cpp
+    )
 
     add_executable(gb_emu
         ${APP_SRCS}

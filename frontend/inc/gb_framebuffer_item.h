@@ -13,7 +13,7 @@ class GBFramebufferItem : public QQuickItem
     Q_PROPERTY(Framebuffer *frame READ frame WRITE set_frame)
   public:
     explicit GBFramebufferItem(QQuickItem *parent = nullptr);
-    ~GBFramebufferItem() override = default;
+    virtual ~GBFramebufferItem() override = default;
 
     auto frame() -> Framebuffer *
     {

@@ -4,8 +4,8 @@
 #include <QDebug>
 #include <QKeyEvent>
 #include <QKeySequence>
-#include <QMediaDevices>
 #include <QQmlContext>
+#include <QSettings>
 #include <QThread>
 #include <QUrl>
 #include <algorithm>
@@ -20,23 +20,24 @@
  * @param refresh_rate Real Game Boy refresh rate in Hz (e.g. ≈59.7275).
  */
 FrontendQt::FrontendQt(const Config &config, float refresh_rate)
-    : _config(config), _scale(config._screen_scale), _app(_argc, nullptr)
+    : _config(config), _scale(config._screen_scale),
+      _settings(QString(organization_name.data()), QString(app_name.data())), _controllers(_settings),
+      _app(_argc, nullptr)
 {
     _increment_frame = static_cast<qint64>(1000000000.0f / refresh_rate);
     _next_frame = _increment_frame;
     init_qt();
-    init_audio();
+    _audio.init_audio();
     _controllers.init_controllers();
+    load_settings();
     connect(this, &FrontendQt::languageChanged, &_controllers, &ControllersQt::keyBindingsChanged);
 }
 
 /**
- * @brief Destroys the Qt frontend and stops the audio sink.
+ * @brief Destroys the Qt frontend.
  */
 FrontendQt::~FrontendQt()
 {
-    if (_audio_sink)
-        _audio_sink->stop();
     _app.removeTranslator(_translator.get());
 }
 
@@ -119,34 +120,12 @@ auto FrontendQt::delay() -> void
 }
 
 /**
- * @brief Applies the high-pass filter if active, then sends the buffer to the Qt audio sink.
+ * @brief Forwards the APU samples to the Qt audio output.
  * @param buffer View of the audio samples produced by the APU.
  */
 auto FrontendQt::play_audio(std::span<const int16_t> buffer) -> void
 {
-    qint64 total = static_cast<qint64>(buffer.size()) * sizeof(int16_t);
-    qint64 done = 0;
-    qint64 writed = 0;
-
-    if (buffer.empty() || _audio_device == nullptr)
-        return;
-
-    if (_audio_buffer.size() != buffer.size())
-        _audio_buffer.resize(buffer.size());
-    std::copy(buffer.begin(), buffer.end(), _audio_buffer.begin());
-
-    if (_config._audio_filter)
-        for (int channel = 0; channel < channels; ++channel)
-            _filter[channel].filter(std::span<int16_t>(_audio_buffer), channel, channels);
-
-    while (done < total)
-    {
-        writed = _audio_device->write(reinterpret_cast<const char *>(_audio_buffer.data()) + done, total - done);
-        done += writed;
-        if (writed < 0)
-            throw std::runtime_error(
-                std::format("QIODevice write failed : {}", _audio_device->errorString().toStdString()));
-    }
+    _audio.play_audio(buffer, _config._audio_filter);
 }
 
 /**
@@ -165,12 +144,12 @@ auto FrontendQt::render(std::span<const uint8_t> buffer) -> void
 }
 
 /**
- * @brief Returns the audio sample rate used by the audio sink.
+ * @brief Returns the audio sample rate used by the audio output.
  * @return Sample rate in Hz.
  */
 auto FrontendQt::get_samplerate() -> uint32_t
 {
-    return _samplerate;
+    return _audio.samplerate();
 }
 
 /**
@@ -197,6 +176,38 @@ auto FrontendQt::load_rom(const QString &filename) -> void
 }
 
 /**
+ * @brief Writes the interface language and the screen scale to the settings.
+ */
+/**
+ * @brief Restores the screen scale and the interface language from the settings.
+ */
+auto FrontendQt::load_settings() -> void
+{
+    if (_settings.contains(QStringLiteral("screen/scale")))
+    {
+        const int scale = _settings.value(QStringLiteral("screen/scale")).toInt();
+
+        set_scale(scale);
+    }
+    if (_settings.contains(QStringLiteral("ui/language")))
+    {
+        const QString language = _settings.value(QStringLiteral("ui/language")).toString();
+
+        set_language(language);
+    }
+}
+
+/**
+ * @brief Writes the interface language and the screen scale to the settings.
+ */
+auto FrontendQt::save_settings() -> void
+{
+    _settings.setValue(QStringLiteral("ui/language"), _language);
+    _settings.setValue(QStringLiteral("screen/scale"), _scale);
+    _settings.sync();
+}
+
+/**
  * @brief Changes the screen scale factor from the QML interface.
  *
  * The window size follows through the screenWidth / screenHeight properties, which
@@ -210,6 +221,7 @@ auto FrontendQt::set_scale(int scale) -> void
         return;
     _scale = scale;
     emit resolutionChanged();
+    save_settings();
 }
 
 /**
@@ -244,6 +256,7 @@ auto FrontendQt::load_state() -> void
 auto FrontendQt::init_qt() -> void
 {
     _app.installEventFilter(&_controllers);
+    _app.setOrganizationName(QString(organization_name.data()));
     _app.setApplicationName(QString(app_name.data()));
     _app.setApplicationVersion(QString(app_version.data()));
     set_language();
@@ -284,29 +297,7 @@ auto FrontendQt::set_language(const QString &code) -> void
     _app.installTranslator(_translator.get());
     emit languageChanged();
     _engine.retranslate();
-}
 
-/**
- * @brief Opens the Qt audio sink and starts playback.
- *
- * The sample rate is taken from the preferred format of the default audio device
- * when one is available.
- */
-auto FrontendQt::init_audio() -> void
-{
-    QAudioFormat format;
-    QAudioDevice device = QMediaDevices::defaultAudioOutput();
-
-    if (!device.isNull())
-        _samplerate = device.preferredFormat().sampleRate();
-
-    format.setSampleRate(_samplerate);
-    format.setChannelCount(channels);
-    format.setSampleFormat(QAudioFormat::Int16);
-
-    _audio_sink = std::make_unique<QAudioSink>(format);
-    _audio_sink->setVolume(1.0);
-    _audio_device = _audio_sink->start();
-    if (!_audio_device)
-        throw std::runtime_error("QAudioSink::start: failed to open audio device");
+    if (!code.isEmpty())
+        save_settings();
 }

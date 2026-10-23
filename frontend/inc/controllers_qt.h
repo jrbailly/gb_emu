@@ -4,6 +4,7 @@
 #include <QEvent>
 #include <QMap>
 #include <QObject>
+#include <QSettings>
 #include <QString>
 #include <QVariantList>
 #include <atomic>
@@ -24,12 +25,14 @@ class ControllersQt : public QObject
     Q_PROPERTY(int rebindingKey READ rebinding_key WRITE set_rebinding_key NOTIFY rebindingChanged)
 
   public:
-    ControllersQt() = default;
-    ~ControllersQt() override = default;
+    explicit ControllersQt(QSettings &settings);
+    virtual ~ControllersQt() override = default;
 
     auto init_controllers() -> void;
     auto eventFilter(QObject *watched, QEvent *event) -> bool override;
     auto keyBindings() const -> QVariantList;
+    auto load_settings() -> void;
+    auto save_settings() -> void;
     auto set_rebinding_key(int key_code) -> void;
     auto rebinding_key() const -> int
     {
@@ -47,8 +50,10 @@ class ControllersQt : public QObject
   signals:
     auto keyBindingsChanged() -> void;
     auto rebindingChanged() -> void;
+    auto bindingPersisted() -> void;
 
   private:
+    auto load_bindings(QMap<int, KeyBinding> &bindings) -> void;
     auto rebind_key(int key_code) -> void;
 
   private:
@@ -56,6 +61,7 @@ class ControllersQt : public QObject
     std::atomic<uint8_t> _buttons{0xFF};
     QMap<int, KeyBinding> _dpads_binding_keys;
     QMap<int, KeyBinding> _buttons_binding_keys;
+    QSettings &_settings;
     int _rebinding_key{-1};
 };
 

@@ -4,7 +4,6 @@
 #include <cstring>
 #include <format>
 #include <iostream>
-#include <vector>
 
 /**
  * @brief Constructs the SDL frontend, opens the audio device and initialises input bindings.
@@ -12,11 +11,26 @@
  * @param refresh_rate Real Game Boy refresh rate in Hz (e.g. ≈59.7275).
  */
 FrontendSDL::FrontendSDL(const Config &config, float refresh_rate)
-    : _active_filter(config._audio_filter), _audio_stream(nullptr), _dpads(0xF), _buttons(0xF), _save_requested(false),
-      _load_requested(false), _scale(config._screen_scale)
+    : _active_filter(config._audio_filter), _dpads(0xF), _buttons(0xF), _save_requested(false), _load_requested(false),
+      _scale(config._screen_scale)
 {
     _increment_frame = SDL_GetPerformanceFrequency() / refresh_rate;
     _next_frame = SDL_GetPerformanceCounter() + _increment_frame;
+}
+
+/**
+ * @brief Destroys the SDL frontend and shuts SDL down.
+ */
+FrontendSDL::~FrontendSDL()
+{
+    if (_texture_viewer)
+        SDL_DestroyTexture(_texture_viewer);
+    if (_renderer)
+        SDL_DestroyRenderer(_renderer);
+    if (_window)
+        SDL_DestroyWindow(_window);
+    _audio.shutdown();
+    SDL_Quit();
 }
 
 /**
@@ -26,9 +40,10 @@ auto FrontendSDL::init() -> void
 {
     if (!SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_JOYSTICK | SDL_INIT_GAMEPAD | SDL_INIT_EVENTS))
         throw std::runtime_error(std::format("SDL_Init : {}", SDL_GetError()));
-    init_audio();
+    _audio.init_audio();
     init_graphics();
     init_controllers();
+    _initialized = true;
 }
 
 /**
@@ -38,23 +53,6 @@ auto FrontendSDL::init() -> void
 auto FrontendSDL::log(std::string_view message) -> void
 {
     std::cerr << message << std::endl;
-}
-
-/**
- * @brief Opens the SDL audio device and starts playback.
- */
-auto FrontendSDL::init_audio() -> void
-{
-    SDL_AudioSpec spec;
-
-    spec.format = SDL_AUDIO_S16;
-    spec.channels = channels;
-    spec.freq = samplerate;
-    _audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, nullptr, nullptr);
-    if (!_audio_stream)
-        throw std::runtime_error(std::format("SDL_OpenAudioDeviceStream : {}", SDL_GetError()));
-    if (!SDL_ResumeAudioStreamDevice(_audio_stream))
-        throw std::runtime_error(std::format("SDL_ResumeAudioStreamDevice : {}", SDL_GetError()));
 }
 
 /**
@@ -83,41 +81,22 @@ auto FrontendSDL::init_graphics() -> void
  */
 auto FrontendSDL::init_controllers() -> void
 {
-    _dpads_binding_keys[SDLK_Z] = Controllers::UP;
-    _dpads_binding_keys[SDLK_S] = Controllers::DOWN;
-    _dpads_binding_keys[SDLK_Q] = Controllers::LEFT;
-    _dpads_binding_keys[SDLK_D] = Controllers::RIGHT;
+    _dpads_binding_keys[SDL_SCANCODE_W] = Controllers::UP;
+    _dpads_binding_keys[SDL_SCANCODE_S] = Controllers::DOWN;
+    _dpads_binding_keys[SDL_SCANCODE_A] = Controllers::LEFT;
+    _dpads_binding_keys[SDL_SCANCODE_D] = Controllers::RIGHT;
     _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_UP] = Controllers::UP;
     _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_DOWN] = Controllers::DOWN;
     _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_LEFT] = Controllers::LEFT;
     _dpads_binding_gamepad[SDL_GAMEPAD_BUTTON_DPAD_RIGHT] = Controllers::RIGHT;
-    _buttons_binding_keys[SDLK_RETURN] = Controllers::START;
-    _buttons_binding_keys[SDLK_BACKSPACE] = Controllers::SELECT;
-    _buttons_binding_keys[SDLK_L] = Controllers::A;
-    _buttons_binding_keys[SDLK_K] = Controllers::B;
+    _buttons_binding_keys[SDL_SCANCODE_RETURN] = Controllers::START;
+    _buttons_binding_keys[SDL_SCANCODE_BACKSPACE] = Controllers::SELECT;
+    _buttons_binding_keys[SDL_SCANCODE_L] = Controllers::A;
+    _buttons_binding_keys[SDL_SCANCODE_K] = Controllers::B;
     _buttons_binding_gamepad[SDL_GAMEPAD_BUTTON_START] = Controllers::START;
     _buttons_binding_gamepad[SDL_GAMEPAD_BUTTON_GUIDE] = Controllers::SELECT;
     _buttons_binding_gamepad[SDL_GAMEPAD_BUTTON_SOUTH] = Controllers::A;
     _buttons_binding_gamepad[SDL_GAMEPAD_BUTTON_EAST] = Controllers::B;
-}
-
-/**
- * @brief Destroys the SDL frontend and closes the audio stream.
- */
-FrontendSDL::~FrontendSDL()
-{
-    if (_texture_viewer)
-        SDL_DestroyTexture(_texture_viewer);
-    if (_renderer)
-        SDL_DestroyRenderer(_renderer);
-    if (_window)
-        SDL_DestroyWindow(_window);
-    if (_audio_stream)
-    {
-        SDL_DestroyAudioStream(_audio_stream);
-        SDL_Quit();
-        _audio_stream = nullptr;
-    }
 }
 
 /**
@@ -153,28 +132,30 @@ auto FrontendSDL::event_filter(const SDL_Event &event) -> bool
     case SDL_EVENT_QUIT:
         return true;
     case SDL_EVENT_KEY_DOWN:
-        if (event.key.key == SDLK_ESCAPE)
+        if (event.key.scancode == SDL_SCANCODE_ESCAPE)
             return true;
-        if (event.key.key == SDLK_F1)
+        if (event.key.repeat)
+            break;
+        if (event.key.scancode == SDL_SCANCODE_F1)
             _save_requested = true;
-        if (event.key.key == SDLK_F2)
+        if (event.key.scancode == SDL_SCANCODE_F2)
             _load_requested = true;
-        if (_dpads_binding_keys.count(event.key.key))
-            _dpads &= ~_dpads_binding_keys[event.key.key];
-        if (_buttons_binding_keys.count(event.key.key))
-            _buttons &= ~_buttons_binding_keys[event.key.key];
+        if (_dpads_binding_keys.count(event.key.scancode))
+            _dpads &= static_cast<uint8_t>(~_dpads_binding_keys[event.key.scancode]);
+        if (_buttons_binding_keys.count(event.key.scancode))
+            _buttons &= static_cast<uint8_t>(~_buttons_binding_keys[event.key.scancode]);
         break;
     case SDL_EVENT_KEY_UP:
-        if (_dpads_binding_keys.count(event.key.key))
-            _dpads |= _dpads_binding_keys[event.key.key];
-        if (_buttons_binding_keys.count(event.key.key))
-            _buttons |= _buttons_binding_keys[event.key.key];
+        if (_dpads_binding_keys.count(event.key.scancode))
+            _dpads |= static_cast<uint8_t>(_dpads_binding_keys[event.key.scancode]);
+        if (_buttons_binding_keys.count(event.key.scancode))
+            _buttons |= static_cast<uint8_t>(_buttons_binding_keys[event.key.scancode]);
         break;
     case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
         if (_dpads_binding_gamepad.count(event.gbutton.button))
-            _dpads &= ~_dpads_binding_gamepad[event.gbutton.button];
+            _dpads &= static_cast<uint8_t>(~_dpads_binding_gamepad[event.gbutton.button]);
         if (_buttons_binding_gamepad.count(event.gbutton.button))
-            _buttons &= ~_buttons_binding_gamepad[event.gbutton.button];
+            _buttons &= static_cast<uint8_t>(~_buttons_binding_gamepad[event.gbutton.button]);
         break;
     case SDL_EVENT_GAMEPAD_BUTTON_UP:
         if (_dpads_binding_gamepad.count(event.gbutton.button))
@@ -191,13 +172,17 @@ auto FrontendSDL::event_filter(const SDL_Event &event) -> bool
 /**
  * @brief Runs the blocking SDL event loop until a quit event is received.
  *
- * Waits for each event and feeds it to @ref event_filter, returning once a quit
+ * Waits until @ref init has completed before entering the SDL event loop, then
+ * waits for each event and feeds it to @ref event_filter, returning once a quit
  * event has been handled. SDL_WaitEvent sleeps while the queue is empty, so this
  * does not spin the CPU.
  */
 auto FrontendSDL::process_events() -> void
 {
     SDL_Event event;
+
+    while (!_initialized)
+        SDL_Delay(10);
 
     while (true)
     {
@@ -213,9 +198,7 @@ auto FrontendSDL::process_events() -> void
  */
 auto FrontendSDL::pop_save_request() -> bool
 {
-    bool requested = _save_requested;
-    _save_requested = false;
-    return requested;
+    return _save_requested.exchange(false);
 }
 
 /**
@@ -224,9 +207,7 @@ auto FrontendSDL::pop_save_request() -> bool
  */
 auto FrontendSDL::pop_load_request() -> bool
 {
-    bool requested = _load_requested;
-    _load_requested = false;
-    return requested;
+    return _load_requested.exchange(false);
 }
 
 /**
@@ -258,21 +239,21 @@ auto FrontendSDL::delay() -> void
 }
 
 /**
- * @brief Applies the high-pass filter if active, then sends the buffer to the SDL audio stream.
+ * @brief Forwards the APU samples to the SDL audio output.
  * @param buffer View of the audio samples produced by the APU.
  */
 auto FrontendSDL::play_audio(std::span<const int16_t> buffer) -> void
 {
-    std::vector<int16_t> copy(buffer.begin(), buffer.end());
+    _audio.play_audio(buffer, _active_filter);
+}
 
-    if (!buffer.empty())
-    {
-        if (_active_filter)
-            for (int channel = 0; channel < channels; ++channel)
-                _filter[channel].filter(std::span<int16_t>(copy), channel, channels);
-        if (!SDL_PutAudioStreamData(_audio_stream, copy.data(), copy.size() * sizeof(int16_t)))
-            throw std::runtime_error(std::format("SDL_PutAudioStreamData : {}", SDL_GetError()));
-    }
+/**
+ * @brief Returns the audio sample rate used by the audio output.
+ * @return Sample rate in Hz.
+ */
+auto FrontendSDL::get_samplerate() -> uint32_t
+{
+    return _audio.samplerate();
 }
 
 /**

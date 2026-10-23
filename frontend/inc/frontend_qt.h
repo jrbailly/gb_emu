@@ -2,16 +2,17 @@
 #define _FRONTEND_QT_H_
 
 #include "apu.h"
+#include "audio_qt.h"
 #include "config.h"
 #include "controllers_qt.h"
 #include "framebuffer.h"
-#include "highpass_filter.h"
 #include "ifrontend.h"
 #include "lcd.h"
-#include <QAudioSink>
+#include "version.h"
 #include <QElapsedTimer>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QSettings>
 #include <QTranslator>
 #include <atomic>
 #include <cstdint>
@@ -28,7 +29,7 @@ class FrontendQt : public QObject, public IFrontend
     Q_PROPERTY(QString language READ language NOTIFY languageChanged)
   public:
     FrontendQt(const Config &config, float refresh_rate);
-    ~FrontendQt() override;
+    virtual ~FrontendQt() override;
     auto init() -> void override;
     auto get_input(uint8_t &pad, uint8_t &button) -> void override;
     auto process_events() -> void override;
@@ -75,26 +76,24 @@ class FrontendQt : public QObject, public IFrontend
 
   private:
     auto init_qt() -> void;
-    auto init_audio() -> void;
+    auto load_settings() -> void;
+    auto save_settings() -> void;
 
   private:
     int _argc{0};
     const Config &_config;
     int _scale{1};
+    QSettings _settings;
     Framebuffer _framebuffer;
+    AudioQt _audio;
     ControllersQt _controllers;
     QGuiApplication _app;
     QQmlApplicationEngine _engine;
     std::unique_ptr<QTranslator> _translator;
     QString _language;
-    std::unique_ptr<QAudioSink> _audio_sink;
     QElapsedTimer _elapsed_timer;
     qint64 _next_frame;
     qint64 _increment_frame;
-    uint32_t _samplerate{default_samplerate};
-    QIODevice *_audio_device{nullptr};
-    std::vector<int16_t> _audio_buffer;
-    std::array<HighpassFilter, channels> _filter;
     std::string _rom_path;
     std::atomic<bool> _save_requested{false};
     std::atomic<bool> _load_requested{false};
